@@ -1,16 +1,17 @@
-# app.py — AI Tutor (Claude-Style Clean Interface with Projects, Code, Artifacts & Profile Settings)
+# app.py — AI Math Tutor
+#
+# Creator: Naman Shukla (ramanshukla2005@gmail.com)
+# GitHub: https://github.com/namanshukla93/ai-math-tutor
 #
 # Highlights:
-#   - Name: "AI Tutor" (Replaced Claude branding)
-#   - Clean interface: Removed clutter, focused on Chat, Projects, Code, Artifacts
-#   - Sidebar Navigation: Start new chat, Chats, Projects, Code, Artifacts
-#   - Profile Menu (Click to open):
-#       * Font Style selector (Modern Sans, Classic Editorial, Clean Mono)
-#       * Notification on Problem Solved (celebration toast & chime)
-#       * Time & Focus Mode (Study stopwatch & distraction-free mode)
-#       * Logout / Login option
-#   - Multi-File Scanning: Images (PNG/JPG), PDFs, Text, Worksheets, Code
-#   - File Creation (Artifacts): Create & download printable worksheets, cheat sheets & solution files
+#   - Name: "AI Tutor" (Bespoke identity, zero Streamlit branding)
+#   - Dynamic User Identity: Logged-in username & ID appears across the entire interface
+#   - Dedicated "About" section: Creator details (Naman Shukla) & Product specification
+#   - Aesthetic & Ultra-Clean UI: Warm luxury dark canvas with terracotta accents
+#   - Navigation: 💬 Chat, 📁 Projects, 💻 Code, 📄 Artifacts, ℹ️ About
+#   - Profile Menu (Settings, Font Style, Problem Solved Notifications, Focus Stopwatch, Logout/Login)
+#   - Multi-File Access: Images, PDFs, Text notes, Worksheets, Code
+#   - File Creation (Artifacts): Create & download printable worksheets, cheat sheets & solution sets
 #   - Teach-First (Detailed Solution) -> Auto-generated Similar Practice Question
 
 import time
@@ -30,7 +31,7 @@ from utils import (
 # ─────────────────────────────────────────────
 
 st.set_page_config(
-    page_title="AI Tutor",
+    page_title="AI Math Tutor",
     page_icon="📐",
     layout="centered",
     initial_sidebar_state="expanded",
@@ -51,14 +52,23 @@ if "class_level" not in st.session_state:
     st.session_state.class_level = 5
 
 if "artifacts" not in st.session_state:
-    st.session_state.artifacts = []  # List of {name, content, type}
+    st.session_state.artifacts = []
 
 if "active_nav" not in st.session_state:
     st.session_state.active_nav = "💬 Chat"
 
-# Profile & Preferences Settings
+# User Identity & Profile State
+if "user_name" not in st.session_state:
+    st.session_state.user_name = "Naman Shukla"
+
+if "user_email" not in st.session_state:
+    st.session_state.user_email = "ramanshukla2005@gmail.com"
+
+if "is_logged_in" not in st.session_state:
+    st.session_state.is_logged_in = True
+
 if "font_style" not in st.session_state:
-    st.session_state.font_style = "Modern Sans"  # "Modern Sans", "Classic Editorial", "Clean Mono"
+    st.session_state.font_style = "Modern Sans"
 
 if "notify_solved" not in st.session_state:
     st.session_state.notify_solved = True
@@ -69,12 +79,6 @@ if "focus_mode" not in st.session_state:
 if "session_start_time" not in st.session_state:
     st.session_state.session_start_time = time.time()
 
-if "is_logged_in" not in st.session_state:
-    st.session_state.is_logged_in = True
-
-if "user_name" not in st.session_state:
-    st.session_state.user_name = "Naman Shukla"
-
 if "show_summary" not in st.session_state:
     st.session_state.show_summary = False
 
@@ -83,7 +87,8 @@ if "summary_text" not in st.session_state:
 
 
 # ─────────────────────────────────────────────
-# DYNAMIC FONT & CLAUDE-STYLE WARM CSS
+# DYNAMIC FONT & BESPOKE LUXURY DARK CSS
+# (ZERO STREAMLIT BRANDING)
 # ─────────────────────────────────────────────
 
 font_css_map = {
@@ -97,24 +102,37 @@ st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap');
 
+/* ── Completely Hide All Streamlit Branding & Menus ── */
+#MainMenu {{visibility: hidden !important; display: none !important;}}
+footer {{visibility: hidden !important; display: none !important;}}
+header {{visibility: hidden !important; display: none !important;}}
+[data-testid="stToolbar"] {{display: none !important; visibility: hidden !important;}}
+[data-testid="stDecoration"] {{display: none !important;}}
+[data-testid="stStatusWidget"] {{display: none !important;}}
+.viewerBadge_container__1QSob, [class*="viewerBadge"] {{display: none !important;}}
+[data-testid="manage-app-button"] {{display: none !important;}}
+button[title="View app in Streamlit Community Cloud"] {{display: none !important;}}
+a[href*="streamlit.io"] {{display: none !important;}}
+
+/* ── Typography & Global Elements ── */
 html, body, [class*="css"], .stApp {{
     font-family: {current_font_family} !important;
-    color: #ececec;
+    color: #f1f1f4;
 }}
 
-/* ── Claude Warm Dark Canvas ── */
+/* ── Luxury Charcoal Background Canvas ── */
 .stApp {{
-    background-color: #18181b !important;
+    background-color: #131316 !important;
 }}
 
-/* ── Centered Claude Reading Column ── */
+/* ── Centered Main Viewport ── */
 .block-container {{
     max-width: 820px !important;
     padding-top: 1.2rem !important;
     padding-bottom: 7rem !important;
 }}
 
-/* ── Top Header ── */
+/* ── Bespoke Top Navigation Bar ── */
 .top-header {{
     display: flex;
     align-items: center;
@@ -130,18 +148,33 @@ html, body, [class*="css"], .stApp {{
     font-size: 1.35rem;
     font-weight: 700;
     color: #fbfbfa;
+    letter-spacing: -0.01em;
 }}
 .top-icon {{
     color: #da7756;
     font-size: 1.35rem;
 }}
+.top-user-pill {{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
+    padding: 0.3rem 0.85rem;
+}}
+.user-badge-name {{
+    color: #fbfbfa;
+    font-weight: 600;
+    font-size: 0.88rem;
+}}
 .top-badge {{
-    background: rgba(218, 119, 86, 0.15);
+    background: rgba(218, 119, 86, 0.16);
     border: 1px solid rgba(218, 119, 86, 0.35);
     color: #e5987d;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    padding: 0.25rem 0.8rem;
+    padding: 0.15rem 0.65rem;
     border-radius: 9999px;
 }}
 
@@ -168,14 +201,15 @@ html, body, [class*="css"], .stApp {{
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 56px;
-    height: 56px;
+    width: 58px;
+    height: 58px;
     border-radius: 50%;
     background: rgba(218, 119, 86, 0.14);
-    border: 1.5px solid rgba(218, 119, 86, 0.3);
+    border: 1.5px solid rgba(218, 119, 86, 0.35);
     color: #da7756;
-    font-size: 1.8rem;
+    font-size: 1.85rem;
     margin-bottom: 0.9rem;
+    box-shadow: 0 4px 20px rgba(218, 119, 86, 0.2);
 }}
 .welcome-title {{
     font-family: 'Newsreader', serif;
@@ -195,7 +229,7 @@ html, body, [class*="css"], .stApp {{
 
 /* ── Suggestion Cards ── */
 .stButton > button {{
-    background: #232328 !important;
+    background: #1c1c22 !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     border-radius: 12px !important;
     color: #f4f4f5 !important;
@@ -204,21 +238,10 @@ html, body, [class*="css"], .stApp {{
     transition: all 0.2s ease !important;
 }}
 .stButton > button:hover {{
-    background: #2e2e36 !important;
+    background: #272730 !important;
     border-color: #da7756 !important;
     color: #ffffff !important;
-}}
-
-/* ── Primary Terracotta Action Button ── */
-.primary-btn button {{
-    background: #da7756 !important;
-    border: none !important;
-    color: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(218, 119, 86, 0.3) !important;
-}}
-.primary-btn button:hover {{
-    background: #c86544 !important;
-    box-shadow: 0 6px 20px rgba(218, 119, 86, 0.45) !important;
+    transform: translateY(-1px);
 }}
 
 /* ── Chat Messages ── */
@@ -235,20 +258,21 @@ html, body, [class*="css"], .stApp {{
     justify-content: flex-end;
 }}
 [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) > div {{
-    background: #27272f !important;
+    background: #23232c !important;
     border-radius: 18px !important;
-    padding: 0.9rem 1.3rem !important;
+    padding: 0.9rem 1.35rem !important;
     max-width: 85%;
     border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
 }}
 
 /* Assistant (AI Tutor) Bubble */
 [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) > div {{
-    background: #1f1f25 !important;
+    background: #191920 !important;
     border-radius: 18px !important;
     padding: 1.3rem 1.6rem !important;
     border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
 }}
 
 /* Typography inside chat */
@@ -265,7 +289,7 @@ html, body, [class*="css"], .stApp {{
     font-weight: 700;
 }}
 [data-testid="stChatMessage"] code {{
-    background: #141416 !important;
+    background: #121216 !important;
     color: #f59e0b !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     padding: 0.15rem 0.4rem !important;
@@ -286,27 +310,66 @@ html, body, [class*="css"], .stApp {{
     margin: 0.85rem 0 !important;
 }}
 
-/* ── Artifact Card (Downloadable File) ── */
+/* ── Artifact & Card Container ── */
 .artifact-box {{
-    background: #1c1c22;
+    background: #191920;
     border: 1.5px solid rgba(218, 119, 86, 0.35);
     border-radius: 14px;
-    padding: 1.2rem 1.4rem;
+    padding: 1.25rem 1.45rem;
     margin: 1rem 0;
 }}
 .artifact-box-title {{
-    font-size: 1.05rem;
+    font-size: 1.08rem;
     font-weight: 700;
     color: #fbfbfa;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.35rem;
 }}
 .artifact-box-desc {{
     font-size: 0.88rem;
     color: #a1a1aa;
     margin-bottom: 0.9rem;
+    line-height: 1.6;
+}}
+
+/* ── About Section Cards ── */
+.about-hero {{
+    background: linear-gradient(135deg, #231f20 0%, #17171c 100%);
+    border: 1px solid rgba(218, 119, 86, 0.35);
+    border-radius: 18px;
+    padding: 1.8rem 2rem;
+    margin-bottom: 1.5rem;
+}}
+.about-badge {{
+    display: inline-block;
+    background: rgba(218, 119, 86, 0.18);
+    color: #e5987d;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    margin-bottom: 0.6rem;
+}}
+.about-title {{
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fbfbfa;
+    margin-bottom: 0.4rem;
+}}
+.about-sub {{
+    font-size: 0.98rem;
+    color: #d4d4d8;
+    line-height: 1.65;
+}}
+.profile-card {{
+    background: #191920;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 1rem;
 }}
 
 /* ── Attached File Chip ── */
@@ -324,9 +387,9 @@ html, body, [class*="css"], .stApp {{
     margin-bottom: 0.6rem;
 }}
 
-/* ── Claude Floating Prompt Bar ── */
+/* ── Floating Prompt Bar ── */
 [data-testid="stChatInput"] {{
-    background: #23232a !important;
+    background: #1c1c24 !important;
     border: 1.5px solid rgba(255, 255, 255, 0.14) !important;
     border-radius: 20px !important;
     box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45) !important;
@@ -346,7 +409,7 @@ html, body, [class*="css"], .stApp {{
 
 /* ── Sidebar ── */
 [data-testid="stSidebar"] {{
-    background-color: #121215 !important;
+    background-color: #0e0e11 !important;
     border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
 }}
 [data-testid="stSidebar"] * {{
@@ -392,11 +455,13 @@ api_key, key_error = get_api_key()
 
 def add_message(role: str, content: str, image=None, file_meta=None):
     """Save message for display and Gemini context."""
+    author = st.session_state.user_name if role == "user" else "AI Tutor"
     st.session_state.messages.append({
         "role": role,
         "content": content,
         "image": image,
         "file_meta": file_meta,
+        "author": author,
     })
     gemini_role = "model" if role == "assistant" else "user"
     st.session_state.gemini_history.append({
@@ -411,7 +476,7 @@ def send_to_tutor(user_text: str, image=None, file_meta=None):
 
     system_prompt = get_system_prompt(st.session_state.class_level)
 
-    with st.spinner("AI Tutor is thinking & drafting solution... 📐"):
+    with st.spinner("AI Tutor is analyzing & drafting solution... 📐"):
         reply = get_gemini_response(
             api_key=api_key,
             system_prompt=system_prompt,
@@ -421,36 +486,35 @@ def send_to_tutor(user_text: str, image=None, file_meta=None):
 
     add_message("assistant", reply)
 
-    # Trigger celebration notification if enabled
     if st.session_state.notify_solved:
-        st.toast("🎯 Detailed solution & practice problem prepared!", icon="⭐")
+        st.toast("🎯 Solution & practice problem prepared!", icon="⭐")
 
 
 # ─────────────────────────────────────────────
-# SIDEBAR (Claude-Style Clean Navigation + Profile Menu)
+# SIDEBAR NAVIGATION & PROFILE SETTINGS
 # ─────────────────────────────────────────────
 
 with st.sidebar:
     st.markdown("### 📐 AI Tutor")
 
-    # 1. Start New Chat Button (Prominent)
-    col_new, _ = st.columns([1, 0.01])
-    with col_new:
-        if st.button("➕ Start new chat", use_container_width=True, key="new_chat_btn"):
-            st.session_state.messages = []
-            st.session_state.gemini_history = []
-            st.session_state.show_summary = False
-            st.session_state.summary_text = ""
-            st.session_state.active_nav = "💬 Chat"
-            st.rerun()
+    # 1. Start New Chat Button
+    if st.button("➕ Start new chat", use_container_width=True, key="new_chat_btn"):
+        st.session_state.messages = []
+        st.session_state.gemini_history = []
+        st.session_state.show_summary = False
+        st.session_state.summary_text = ""
+        st.session_state.active_nav = "💬 Chat"
+        st.rerun()
 
     st.markdown("")
 
-    # 2. Main Navigation Tabs (Chat, Projects, Code, Artifacts)
+    # 2. Main Navigation Tabs
+    nav_options = ["💬 Chat", "📁 Projects", "💻 Code", "📄 Artifacts", "ℹ️ About"]
+    cur_idx = nav_options.index(st.session_state.active_nav) if st.session_state.active_nav in nav_options else 0
     st.session_state.active_nav = st.radio(
         label="Navigation",
-        options=["💬 Chat", "📁 Projects", "💻 Code", "📄 Artifacts"],
-        index=["💬 Chat", "📁 Projects", "💻 Code", "📄 Artifacts"].index(st.session_state.active_nav),
+        options=nav_options,
+        index=cur_idx,
         label_visibility="collapsed",
     )
 
@@ -473,7 +537,7 @@ with st.sidebar:
         st.session_state.summary_text = ""
         st.rerun()
 
-    # 4. Quick Session Parent Summary
+    # 4. Quick Session Summary
     if st.button("📋 Session Summary", use_container_width=True):
         if key_error:
             st.error(key_error)
@@ -493,15 +557,19 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 5. USER PROFILE MENU (Tap to open Settings, Font, Notification, Time & Focus, Logout)
+    # 5. USER PROFILE MENU (Tap to edit username, ID, font, notifications, focus)
     user_status_label = f"👤 {st.session_state.user_name}" if st.session_state.is_logged_in else "👤 Guest (Click to Log In)"
 
     with st.popover(user_status_label, use_container_width=True):
-        st.markdown(f"#### ⚙️ Settings & Profile")
-        if st.session_state.is_logged_in:
-            st.caption(f"Signed in as **{st.session_state.user_name}**")
-        else:
-            st.caption("You are currently logged out.")
+        st.markdown("#### ⚙️ Profile & Settings")
+        
+        # User details inputs
+        edit_name = st.text_input("Username:", value=st.session_state.user_name)
+        edit_email = st.text_input("User Email / ID:", value=st.session_state.user_email)
+        if edit_name != st.session_state.user_name or edit_email != st.session_state.user_email:
+            st.session_state.user_name = edit_name.strip() if edit_name.strip() else "Student"
+            st.session_state.user_email = edit_email.strip() if edit_email.strip() else "user@math.edu"
+            st.rerun()
 
         st.divider()
 
@@ -545,20 +613,20 @@ with st.sidebar:
             if st.button("🚪 Log Out", use_container_width=True):
                 st.session_state.is_logged_in = False
                 st.session_state.user_name = "Guest"
+                st.session_state.user_email = "guest@math.edu"
                 st.rerun()
         else:
-            login_name = st.text_input("Enter Student Name:", value="Naman Shukla")
-            if st.button("🔑 Log In", use_container_width=True):
+            if st.button("🔑 Log In as Naman Shukla", use_container_width=True):
                 st.session_state.is_logged_in = True
-                st.session_state.user_name = login_name.strip() if login_name.strip() else "Student"
+                st.session_state.user_name = "Naman Shukla"
+                st.session_state.user_email = "ramanshukla2005@gmail.com"
                 st.rerun()
 
 
 # ─────────────────────────────────────────────
-# MAIN CONTENT AREA
+# MAIN TOP HEADER WITH DYNAMIC USER IDENTITY
 # ─────────────────────────────────────────────
 
-# Clean Top Header
 st.markdown(
     f"""
     <div class="top-header">
@@ -566,7 +634,10 @@ st.markdown(
             <span class="top-icon">📐</span>
             <span>AI Tutor</span>
         </div>
-        <div class="top-badge">Class {st.session_state.class_level} • {st.session_state.active_nav}</div>
+        <div class="top-user-pill">
+            <span class="user-badge-name">👤 {st.session_state.user_name}</span>
+            <span class="top-badge">Class {st.session_state.class_level}</span>
+        </div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -578,7 +649,7 @@ if st.session_state.focus_mode:
     st.markdown(
         f"""
         <div class="focus-banner">
-            <span>⏱️ <b>Focus Mode Active</b> • Stay in the flow</span>
+            <span>⏱️ <b>Focus Mode Active</b> • {st.session_state.user_name} is in deep study flow</span>
             <span>Study Time: <b>{elapsed_mins}m</b></span>
         </div>
         """,
@@ -588,7 +659,7 @@ if st.session_state.focus_mode:
 # API Key Error Check
 if key_error:
     st.error(f"🔑 **API Key Missing:** {key_error}")
-    st.info("Add `GEMINI_API_KEY` to your `.env` file locally or in Streamlit Cloud Secrets.")
+    st.info("Add `GEMINI_API_KEY` to your `.env` file locally or in Cloud Secrets.")
     st.stop()
 
 
@@ -598,24 +669,23 @@ if key_error:
 
 if st.session_state.active_nav == "💬 Chat":
 
-    # Welcome Screen (Shown when chat is empty)
+    # Welcome Screen
     if not st.session_state.messages:
         st.markdown(
             f"""
             <div class="welcome-hero">
                 <div class="welcome-icon">📐</div>
-                <div class="welcome-title">How can I help you with math today?</div>
+                <div class="welcome-title">Welcome back, {st.session_state.user_name}!</div>
                 <div class="welcome-sub">
-                    Ask any question, or attach <b>images, PDFs, or worksheets</b> below.
-                    I will explain the complete step-by-step solution, and create a
-                    <b>similar practice problem</b> for you to solve!
+                    What math problem would you like to master today?
+                    Attach <b>photos, PDFs, or worksheets</b> below. I will explain the complete
+                    detailed solution, and create a <b>similar practice problem</b> for you!
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        # 4 Clean Suggestion Cards
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🍕 Explain Fractions with real-life examples", use_container_width=True):
@@ -650,10 +720,12 @@ if st.session_state.active_nav == "💬 Chat":
 
     # Render Chat History
     for msg in st.session_state.messages:
+        author_display = msg.get("author", st.session_state.user_name if msg["role"] == "user" else "AI Tutor")
         with st.chat_message(
             name=msg["role"],
             avatar="🧑‍🎓" if msg["role"] == "user" else "📐",
         ):
+            st.caption(f"**{author_display}**")
             if msg.get("file_meta"):
                 f_meta = msg["file_meta"]
                 st.markdown(
@@ -741,7 +813,7 @@ if st.session_state.active_nav == "💬 Chat":
 
 elif st.session_state.active_nav == "📁 Projects":
     st.markdown("### 📁 Math Projects & Workspaces")
-    st.caption("Organized study workspaces tailored for Class " + str(st.session_state.class_level))
+    st.caption("Organized study workspaces tailored for " + st.session_state.user_name + " (Class " + str(st.session_state.class_level) + ")")
 
     p1, p2 = st.columns(2)
     with p1:
@@ -819,9 +891,8 @@ print(f"Roots of x^2 - 5x + 6 = 0 are: {root1}, {root2}")
 
 elif st.session_state.active_nav == "📄 Artifacts":
     st.markdown("### 📄 Created Files & Artifacts")
-    st.caption("Generate printable practice worksheets, formula cheat sheets, and study sets like Claude.")
+    st.caption("Generate printable practice worksheets, formula cheat sheets, and study sets.")
 
-    # Generator Card
     with st.expander("✨ Create New Math File (Worksheet / Cheat Sheet)", expanded=True):
         topic_input = st.text_input("Math Topic:", placeholder="e.g. Linear Equations, Fractions, Trigonometry")
         art_type = st.selectbox(
@@ -850,7 +921,6 @@ elif st.session_state.active_nav == "📄 Artifacts":
                 st.success(f"Generated {fname}!")
                 st.rerun()
 
-    # List of all generated files with download buttons
     if st.session_state.artifacts:
         st.markdown("#### 📥 Your Downloadable Files:")
         for idx, art in enumerate(reversed(st.session_state.artifacts)):
@@ -873,3 +943,60 @@ elif st.session_state.active_nav == "📄 Artifacts":
             )
     else:
         st.info("No files generated yet. Use the creator above to generate your first worksheet or cheat sheet!")
+
+
+# ─────────────────────────────────────────────
+# VIEW 5: ℹ️ ABOUT (Creator & Product Specification)
+# ─────────────────────────────────────────────
+
+elif st.session_state.active_nav == "ℹ️ About":
+    st.markdown(
+        """
+        <div class="about-hero">
+            <span class="about-badge">PRODUCT SPECIFICATION & ARCHITECTURE</span>
+            <div class="about-title">📐 AI Math Tutor</div>
+            <div class="about-sub">
+                A state-of-the-art educational AI companion engineered to empower school students (Class 1–12) 
+                with conceptual clarity, step-by-step problem walkthroughs, and proactive practice testing.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # 1. Creator Profile Card
+    st.markdown(
+        """
+        <div class="profile-card">
+            <h3 style="color:#fbfbfa; margin-top:0;">👨‍💻 About the Creator</h3>
+            <p style="color:#d4d4d8; font-size:1rem; line-height:1.7;">
+                <b>Creator & Developer:</b> Naman Shukla<br>
+                <b>Email:</b> <a href="mailto:ramanshukla2005@gmail.com" style="color:#e5987d; text-decoration:none;">ramanshukla2005@gmail.com</a><br>
+                <b>GitHub:</b> <a href="https://github.com/namanshukla93" target="_blank" style="color:#e5987d; text-decoration:none;">github.com/namanshukla93</a><br>
+                <b>Project Repository:</b> <a href="https://github.com/namanshukla93/ai-math-tutor" target="_blank" style="color:#e5987d; text-decoration:none;">github.com/namanshukla93/ai-math-tutor</a>
+            </p>
+            <p style="color:#a1a1aa; font-size:0.92rem; line-height:1.6;">
+                Naman Shukla is an AI & Python software developer passionate about crafting high-impact, human-centric educational technologies. 
+                AI Math Tutor was developed to eliminate math anxiety, making top-tier personalized tutoring accessible to every school student regardless of background.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # 2. Product Architecture & Core Features
+    st.markdown(
+        """
+        <div class="profile-card">
+            <h3 style="color:#fbfbfa; margin-top:0;">⚡ Product Architecture & Highlights</h3>
+            <ul style="color:#d4d4d8; font-size:0.95rem; line-height:1.8;">
+                <li><b>Two-Step Pedagogical Engine:</b> Unlike conventional AI that merely dumps answers, AI Tutor walks students through each calculation step conceptually, and then automatically synthesizes a similar problem for active self-testing.</li>
+                <li><b>Universal Multimodal Perception:</b> Processes images (handwritten notebook photos, textbook snapshots), PDF worksheets, and raw text files via Google Gemini Vision.</li>
+                <li><b>Claude-Style Artifacts System:</b> On-demand creation of printable practice worksheets, formula cheat sheets, and solved problem sets downloadable as standard Markdown documents.</li>
+                <li><b>Dynamic Grade Adaptation:</b> Adjusts vocabulary, tone, and CBSE/NCERT curriculum benchmarks across 4 age bands (Class 1–3, 4–6, 7–10, 11–12).</li>
+                <li><b>Bespoke Dark Aesthetic:</b> Distraction-free, responsive dark canvas with dynamic typography switching and zero platform watermarks.</li>
+            </ul>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
