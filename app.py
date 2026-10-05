@@ -20,103 +20,369 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. Custom CSS for modern student-centric aesthetics
+# 2. Custom CSS for modern student-centric aesthetics & high-impact animations
 st.markdown("""
 <style>
-    /* Global styles */
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    /* Global styles & Modern Google Font */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
     
     html, body, [class*="css"] {
-        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     
+    /* Sleek Deep Space Radial Gradient Background */
     .stApp {
-        background: radial-gradient(circle at top left, #0f172a, #090d16 100%);
+        background: radial-gradient(circle at 15% 15%, #1e1b4b 0%, #0f172a 45%, #050814 100%) !important;
+        background-attachment: fixed !important;
     }
 
-    /* Hero header */
+    /* Ambient Background Glow Orbs */
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: -150px;
+        left: 20%;
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+        border-radius: 50%;
+        z-index: 0;
+        pointer-events: none;
+        animation: floatOrb 12s ease-in-out infinite alternate;
+    }
+
+    .stApp::after {
+        content: '';
+        position: fixed;
+        bottom: -100px;
+        right: 15%;
+        width: 450px;
+        height: 450px;
+        background: radial-gradient(circle, rgba(236, 72, 153, 0.12) 0%, transparent 70%);
+        border-radius: 50%;
+        z-index: 0;
+        pointer-events: none;
+        animation: floatOrb 15s ease-in-out infinite alternate-reverse;
+    }
+
+    /* Keyframe Animations */
+    @keyframes floatOrb {
+        0% { transform: translateY(0px) scale(1); }
+        50% { transform: translateY(40px) scale(1.08); }
+        100% { transform: translateY(0px) scale(1); }
+    }
+
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(22px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes pulseGlow {
+        0%, 100% {
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.35);
+        }
+        50% {
+            box-shadow: 0 0 28px rgba(99, 102, 241, 0.7), 0 0 45px rgba(168, 85, 247, 0.4);
+        }
+    }
+
+    @keyframes floatSymbol {
+        0% { transform: translateY(0) rotate(0deg); opacity: 0.15; }
+        50% { transform: translateY(-15px) rotate(8deg); opacity: 0.35; }
+        100% { transform: translateY(0) rotate(0deg); opacity: 0.15; }
+    }
+
+    @keyframes buttonShimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+    }
+
+    /* Top Floating Glassmorphic Nav Bar */
+    .top-glass-nav {
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 12px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .brand-logo-wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .brand-logo-icon {
+        background: linear-gradient(135deg, #6366f1, #a855f7);
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+    }
+
+    .brand-name-text {
+        font-size: 1.25rem;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 60%, #818cf8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .status-badge-pill {
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.35);
+        color: #34d399;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 5px 14px;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .status-dot-pulse {
+        width: 8px;
+        height: 8px;
+        background-color: #10b981;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 10px #10b981;
+        animation: pulseGlow 2s infinite ease-in-out;
+    }
+
+    /* Hero Header & Shimmering Title */
     .hero-badge {
         background: rgba(99, 102, 241, 0.15);
         border: 1px solid rgba(99, 102, 241, 0.35);
-        color: #a5b4fc;
-        padding: 4px 14px;
+        color: #c7d2fe;
+        padding: 6px 18px;
         border-radius: 9999px;
-        font-size: 0.85rem;
-        font-weight: 600;
+        font-size: 0.82rem;
+        font-weight: 700;
         display: inline-block;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
     }
 
     .main-title {
-        font-size: 2.2rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #818cf8 100%);
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 25%, #a855f7 60%, #6366f1 100%);
+        background-size: 250% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 4px;
+        animation: gradientShift 6s ease-in-out infinite;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
     }
 
     .sub-title {
         color: #94a3b8;
-        font-size: 1rem;
-        margin-bottom: 20px;
+        font-size: 1.05rem;
+        line-height: 1.6;
+        margin-bottom: 24px;
     }
 
-    /* Cards */
-    .card-box {
-        background: rgba(30, 41, 59, 0.7);
+    /* Interactive Feature Grid Cards on Landing */
+    .landing-features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-top: 28px;
+        animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .feature-card-item {
+        background: rgba(30, 41, 59, 0.5);
+        backdrop-filter: blur(12px);
         border: 1px solid rgba(148, 163, 184, 0.15);
-        border-radius: 12px;
-        padding: 18px;
-        margin-bottom: 16px;
-        backdrop-filter: blur(10px);
+        border-radius: 14px;
+        padding: 18px 20px;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .feature-card-item:hover {
+        transform: translateY(-5px);
+        border-color: rgba(99, 102, 241, 0.5);
+        box-shadow: 0 12px 28px -6px rgba(99, 102, 241, 0.25);
+        background: rgba(30, 41, 59, 0.8);
+    }
+
+    .feature-card-icon {
+        font-size: 1.6rem;
+        margin-bottom: 8px;
+    }
+
+    .feature-card-title {
+        color: #f1f5f9;
+        font-weight: 700;
+        font-size: 0.98rem;
+        margin-bottom: 6px;
+    }
+
+    .feature-card-desc {
+        color: #94a3b8;
+        font-size: 0.83rem;
+        line-height: 1.45;
+    }
+
+    /* Cards with Modern Glassmorphism */
+    .card-box {
+        background: rgba(30, 41, 59, 0.65);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 14px;
+        padding: 22px;
+        margin-bottom: 18px;
+        box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.3);
+        animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: transform 0.25s ease, border-color 0.25s ease;
+    }
+
+    .card-box:hover {
+        border-color: rgba(99, 102, 241, 0.35);
     }
 
     .step-card {
-        background: rgba(15, 23, 42, 0.8);
+        background: rgba(15, 23, 42, 0.85);
+        backdrop-filter: blur(10px);
         border-left: 4px solid #6366f1;
-        border-radius: 0 8px 8px 0;
-        padding: 14px 18px;
-        margin: 12px 0;
+        border-top: 1px solid rgba(148, 163, 184, 0.1);
+        border-right: 1px solid rgba(148, 163, 184, 0.1);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        border-radius: 0 10px 10px 0;
+        padding: 16px 20px;
+        margin: 14px 0;
+        transition: transform 0.2s ease, border-left-color 0.2s ease;
+    }
+
+    .step-card:hover {
+        transform: translateX(4px);
+        border-left-color: #a855f7;
     }
 
     .concept-card {
-        background: rgba(99, 102, 241, 0.1);
-        border: 1px solid rgba(99, 102, 241, 0.25);
-        border-radius: 10px;
-        padding: 14px;
-        margin-bottom: 16px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.06));
+        border: 1px solid rgba(99, 102, 241, 0.35);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 18px;
+        box-shadow: 0 0 18px rgba(99, 102, 241, 0.12);
     }
 
     .final-answer-card {
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.05));
-        border: 1px solid rgba(16, 185, 129, 0.4);
-        border-radius: 12px;
-        padding: 16px 20px;
-        margin: 18px 0;
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.08));
+        border: 1px solid rgba(16, 185, 129, 0.5);
+        border-radius: 14px;
+        padding: 20px 24px;
+        margin: 20px 0;
+        box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
+        animation: pulseGlow 3s infinite ease-in-out;
     }
 
     .practice-card {
-        background: rgba(30, 41, 59, 0.5);
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 10px;
-        padding: 16px;
-        margin: 12px 0;
+        background: rgba(30, 41, 59, 0.6);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 12px;
+        padding: 20px;
+        margin: 14px 0;
+        transition: all 0.25s ease;
+    }
+
+    .practice-card:hover {
+        border-color: rgba(99, 102, 241, 0.45);
+        box-shadow: 0 8px 25px -5px rgba(99, 102, 241, 0.2);
     }
 
     .tip-card {
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid rgba(245, 158, 11, 0.3);
-        border-radius: 8px;
-        padding: 12px 16px;
-        margin: 14px 0;
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin: 16px 0;
     }
 
-    /* Buttons */
+    /* Enhanced Streamlit Buttons with Shimmer & 3D Hover */
     .stButton>button {
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.2s ease-in-out;
+        border-radius: 10px !important;
+        font-weight: 700 !important;
+        padding: 8px 20px !important;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .stButton>button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 20px -4px rgba(99, 102, 241, 0.4) !important;
+    }
+
+    .stButton>button[kind="primary"] {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #4338ca 100%) !important;
+        box-shadow: 0 0 16px rgba(99, 102, 241, 0.35) !important;
+    }
+
+    .stButton>button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #818cf8 0%, #6366f1 50%, #4f46e5 100%) !important;
+        box-shadow: 0 0 26px rgba(99, 102, 241, 0.6) !important;
+    }
+
+    /* Form Inputs & Focus Rings */
+    .stTextInput>div>div>input, .stTextArea>div>div>textarea {
+        background-color: rgba(15, 23, 42, 0.75) !important;
+        border: 1px solid rgba(148, 163, 184, 0.25) !important;
+        border-radius: 10px !important;
+        color: #f8fafc !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .stTextInput>div>div>input:focus, .stTextArea>div>div>textarea:focus {
+        border-color: #818cf8 !important;
+        box-shadow: 0 0 15px rgba(99, 102, 241, 0.45) !important;
+    }
+
+    /* Custom Sleek Scrollbar */
+    ::-webkit-scrollbar {
+        width: 7px;
+        height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #312e81;
+        border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #6366f1;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -137,27 +403,69 @@ if "saved_question_id" not in st.session_state:
 
 
 # 4. Authentication Views
-def render_auth_page():
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.markdown("""
-        <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
-            <div class="hero-badge">🎓 AI Student Portal</div>
-            <h1 class="main-title">ApexSolve</h1>
-            <p class="sub-title">Smart Mathematics & Logical Reasoning Master with Step-by-Step Proofs & Practice Arena</p>
+# 4. Top Navigation Bar (Common for all views)
+def render_top_navbar():
+    user = st.session_state.get("user")
+    user_badge = f"""
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="status-badge-pill"><span class="status-dot-pulse"></span> AI Engine: Active</span>
+            <span style="color: #cbd5e1; font-size: 0.85rem; font-weight: 600; background: rgba(99,102,241,0.18); border: 1px solid rgba(99,102,241,0.3); padding: 5px 14px; border-radius: 9999px;">
+                👤 {user['name']} ({user.get('target_exam', 'General')})
+            </span>
         </div>
-        """, unsafe_allow_html=True)
+    """ if user else """
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="status-badge-pill"><span class="status-dot-pulse"></span> Google Gemini AI: Online</span>
+            <span style="color: #94a3b8; font-size: 0.82rem; font-weight: 500;">v2.4 Production</span>
+        </div>
+    """
 
-        auth_tab1, auth_tab2 = st.tabs(["🔑 Student Login", "📝 New Student Registration"])
+    st.markdown(f"""
+    <div class="top-glass-nav">
+        <div class="brand-logo-wrap">
+            <div class="brand-logo-icon">📐</div>
+            <div>
+                <div class="brand-name-text">ApexSolve</div>
+                <div style="color: #64748b; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">AI Math & Logical Reasoning Master</div>
+            </div>
+        </div>
+        {user_badge}
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# 5. Authentication & Landing Views
+def render_auth_page():
+    render_top_navbar()
+
+    # Hero Banner
+    st.markdown("""
+    <div style="text-align: center; margin-top: 15px; margin-bottom: 25px; animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1);">
+        <div class="hero-badge">✨ Next-Generation Student Intelligence Platform</div>
+        <h1 class="main-title">Master Mathematics & Logical Reasoning</h1>
+        <p class="sub-title" style="max-width: 680px; margin: 0 auto 20px auto;">
+            Experience textbook-grade KaTeX proofs with zero skipped steps, intelligent deductive reasoning, 
+            and adaptive practice problem challenges tailored to your exam.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Centered Auth Card
+    col1, col2, col3 = st.columns([1, 1.8, 1])
+    with col2:
+        st.markdown('<div class="card-box" style="border: 1px solid rgba(99, 102, 241, 0.3); box-shadow: 0 16px 40px -10px rgba(0,0,0,0.5);">', unsafe_allow_html=True)
+        auth_tab1, auth_tab2 = st.tabs(["🔑 Sign In to Portal", "📝 New Student Registration"])
 
         with auth_tab1:
-            st.markdown("### Sign In to Your Learning Space")
+            st.markdown("<div style='font-weight:700; color:#f8fafc; font-size:1.1rem; margin-bottom:6px;'>Welcome Back, Scholar</div>", unsafe_allow_html=True)
+            st.markdown("<div style='color:#94a3b8; font-size:0.85rem; margin-bottom:16px;'>Enter your registered email and password to access your workspace.</div>", unsafe_allow_html=True)
+
             login_email = st.text_input("Student Email", key="login_email_input", placeholder="student@example.com")
             login_pass = st.text_input("Password", type="password", key="login_pass_input")
 
-            col_sub, col_demo = st.columns([1, 1])
+            col_sub, col_demo = st.columns([1.1, 1.1])
             with col_sub:
-                if st.button("🚀 Sign In", use_container_width=True, type="primary"):
+                if st.button("🚀 Sign In to Account", use_container_width=True, type="primary"):
                     if not login_email or not login_pass:
                         st.error("Please fill in both email and password.")
                     else:
@@ -170,7 +478,7 @@ def render_auth_page():
                             st.error(msg)
 
             with col_demo:
-                if st.button("⚡ Quick Demo Login", use_container_width=True, help="Instant 1-click login for demonstration"):
+                if st.button("⚡ 1-Click Instant Demo Login", use_container_width=True, help="Instant 1-click test login for examiners/evaluators"):
                     success, msg, user_data = database.authenticate_user("namanshukla9889@gmail.com", "naman123")
                     if success:
                         st.session_state["user"] = user_data
@@ -179,20 +487,24 @@ def render_auth_page():
                     else:
                         st.error(msg)
 
-            st.caption("💡 Quick demo credentials: `namanshukla9889@gmail.com` | `naman123`")
+            st.markdown("""
+            <div style="background: rgba(99, 102, 241, 0.08); border: 1px dashed rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 8px 12px; margin-top: 14px; text-align: center;">
+                <span style="color: #94a3b8; font-size: 0.8rem;">💡 Quick Demo Account: <code style="color:#c7d2fe;">namanshukla9889@gmail.com</code> | <code style="color:#c7d2fe;">naman123</code></span>
+            </div>
+            """, unsafe_allow_html=True)
 
         with auth_tab2:
-            st.markdown("### Create Your Free Student Account")
+            st.markdown("<div style='font-weight:700; color:#f8fafc; font-size:1.1rem; margin-bottom:6px;'>Create Your Student Profile</div>", unsafe_allow_html=True)
             new_name = st.text_input("Full Name", placeholder="e.g. Naman Shukla", key="reg_name")
             new_email = st.text_input("Email Address", placeholder="e.g. namanshukla9889@gmail.com", key="reg_email")
             new_pass = st.text_input("Create Password (min 6 characters)", type="password", key="reg_pass")
             target_exam = st.selectbox(
-                "Target Examination / Focus",
+                "Target Examination / Academic Level",
                 ["JEE Mains & Advanced", "SSC CGL / Banking / Railways", "CAT / Management Aptitude", "Olympiad / High School", "University / College Degree", "General Aptitude"],
                 key="reg_exam"
             )
 
-            if st.button("✨ Create Student Account", use_container_width=True, type="primary"):
+            if st.button("✨ Register & Launch Workspace", use_container_width=True, type="primary"):
                 success, msg, user_data = database.register_user(new_name, new_email, new_pass, target_exam)
                 if success:
                     st.session_state["user"] = user_data
@@ -200,6 +512,34 @@ def render_auth_page():
                     st.rerun()
                 else:
                     st.error(msg)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # 4 Highlights Feature Cards Grid
+    st.markdown("""
+    <div class="landing-features-grid">
+        <div class="feature-card-item">
+            <div class="feature-card-icon">📐</div>
+            <div class="feature-card-title">Rigorous Math Proofs</div>
+            <div class="feature-card-desc">Zero intermediate steps skipped. Every algebraic substitution and theorem clearly justified in textbook KaTeX.</div>
+        </div>
+        <div class="feature-card-item">
+            <div class="feature-card-icon">🧠</div>
+            <div class="feature-card-title">Deductive Logic Engine</div>
+            <div class="feature-card-desc">Formal syllogisms, Euler-Venn diagrams, complex bloodline relations, and number series sequence analysis.</div>
+        </div>
+        <div class="feature-card-item">
+            <div class="feature-card-icon">🎯</div>
+            <div class="feature-card-title">Adaptive Practice Arena</div>
+            <div class="feature-card-desc">Generate instant multi-tiered practice problems with live answer checking, step hints, and full solutions.</div>
+        </div>
+        <div class="feature-card-item">
+            <div class="feature-card-icon">📚</div>
+            <div class="feature-card-title">Concept & Formula Book</div>
+            <div class="feature-card-desc">High-yield mathematical handbook and reasoning cheat codes (EJOTY, reverse pairs) built directly inside.</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # 5. Main Application Header & Sidebar
@@ -805,6 +1145,7 @@ def main():
     if not st.session_state["user"]:
         render_auth_page()
     else:
+        render_top_navbar()
         selected_menu = render_sidebar()
 
         if selected_menu == "🚀 AI Solver":
