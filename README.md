@@ -1,33 +1,29 @@
 # 🧮 AI Math Tutor — Powered by Gemini
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ai-math-tutor-bynamanshukla.streamlit.app/)
+
 > **Covers Class 1 to Class 12 — from basic counting to calculus basics**
 
-> **GitHub Repository:** [github.com/namanshukla93/ai-math-tutor](https://github.com/namanshukla93/ai-math-tutor)  
-> **Live Demo:** Deployable on Streamlit Community Cloud (free 24/7 hosting)
+> 🌐 **Live Working Demo:** [https://ai-math-tutor-bynamanshukla.streamlit.app/](https://ai-math-tutor-bynamanshukla.streamlit.app/)  
+> 💻 **GitHub Repository:** [github.com/namanshukla93/ai-math-tutor](https://github.com/namanshukla93/ai-math-tutor)
 
 ---
 
 ## 📌 Problem
 
-Many school students (Class 1–12) struggle with math but don't always have a teacher
-available to answer doubts. Hiring a private tutor is expensive. Existing AI tools
-often just give the final answer — which means students don't actually learn.
+Many school students (Class 1–12) struggle with math but don't always have a teacher available to clear doubts. Hiring a private tutor is expensive. Existing AI tools often just dump the final answer without explaining the steps — or refuse to provide full solutions, leaving students confused.
 
 ## 💡 Solution
 
-An AI tutor that behaves like a **good human teacher**:
-- It **never gives the final answer directly**.
-- Instead, it gives **hints and guiding questions**, one step at a time.
-- It is **kind and encouraging** — never discouraging.
-- If the student is wrong, it **explains gently** and helps them try again.
-- If the student asks something non-math, it **politely redirects** to math.
+An AI math tutor with a **Teach First, Then Test (Worked Example + Practice)** model:
+- **Detailed Step-by-Step Solution First**: Explains the concept simply, shows complete step-by-step working, and highlights the final answer.
+- **Auto-Generated Similar Practice Question**: Immediately after solving, the tutor creates a similar practice problem on its own so the student can apply what they just learned.
+- **Active Evaluation**: When the student replies with their answer, the tutor checks it, celebrates correct solutions 🎉, and gently guides them through any mistakes.
+- **ChatGPT & Gemini Style Interface**: Clean, minimalist conversational UI with direct image/photo attachment right in the prompt bar.
 
 ## 🎯 Target Users
 
-Students of **Class 1 through Class 12** — covering topics from basic counting and
-shapes (Class 1–3), to fractions, decimals, and word problems (Class 4–6), to
-algebra, geometry, and trigonometry (Class 7–10), to statistics and calculus
-basics (Class 11–12).
+Students of **Class 1 through Class 12** — covering topics from basic counting and shapes (Class 1–3), to fractions, decimals, and word problems (Class 4–6), to algebra, geometry, and trigonometry (Class 7–10), to statistics and calculus basics (Class 11–12).
 
 ---
 
@@ -35,14 +31,13 @@ basics (Class 11–12).
 
 | Feature | Description |
 |---|---|
-| 🎓 Class selector | Choose Class 1 to 12 — tutor adjusts language and difficulty |
-| 📷 Scan / Upload Problem | Snap a photo or upload an image of your notebook/textbook problem (powered by Gemini Vision) |
-| 💬 Step-by-Step Chat | Ask questions and get interactive Socratic guidance (never direct answers) |
-| 🎲 Practice question | Instant class-appropriate practice question generator |
-| ✅ Check my answer | Submit answers for verification with gentle hints if incorrect |
-| 📋 Parent summary | One-click comprehensive session summary for parents and teachers |
-| 🚫 Safe scope | Off-topic and non-math questions are politely redirected |
-| 🎨 High-Contrast Dark UI | Enhanced typography with Plus Jakarta Sans and formatted KaTeX equations |
+| 🌐 **Live Web App** | 24/7 accessible on any phone or laptop at [ai-math-tutor-bynamanshukla.streamlit.app](https://ai-math-tutor-bynamanshukla.streamlit.app/) |
+| 🎓 **Class Selector** | Choose Class 1 to 12 — tutor adjusts vocabulary, examples, and CBSE/NCERT curriculum difficulty |
+| 📷 **Scan & Attach Photos** | Attach photos of textbook or notebook questions directly in the chat bar (Gemini Vision) |
+| 📝 **Detailed Worked Solutions** | Clear, step-by-step conceptual walkthroughs showing every calculation |
+| 🎯 **Auto Similar Practice** | Tutor automatically creates a similar practice question for self-testing |
+| 📋 **Parent / Session Summary** | Generates a concise progress report for parents and teachers |
+| 🎨 **ChatGPT / Gemini UI** | Distraction-free, responsive dark interface with high-contrast typography & KaTeX math |
 
 ---
 
