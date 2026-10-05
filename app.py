@@ -1,2256 +1,734 @@
-# app.py — AI Math Tutor
-#
-# Creator: Naman Shukla (ramanshukla2005@gmail.com)
-# GitHub: https://github.com/namanshukla93/ai-math-tutor
-#
-# Features:
-#   - Name: "AI Tutor" (Zero Streamlit branding, 100% bespoke identity)
-#   - Dynamic User Identity: Logged-in username & ID appears across entire UI
-#   - Real-time Streaming: Token-by-token streaming using st.write_stream & generate_content_stream
-#   - Sidebar Multi-Session History: "➕ Start new chat" + list of recent chats with titles
-#   - Multi-File Access: Images, PDFs, Text notes, Worksheets, Code
-#   - Claude-Style Artifacts: Generate & download printable worksheets, cheat sheets & solution sets
-#   - Dedicated "About" section: Creator details (Naman Shukla) & Product specification
-#   - Profile Menu: Settings, Font Style, Problem Solved Notifications, Focus Stopwatch, Logout/Login
+"""
+app.py - ApexSolve: AI Math & Logical Reasoning Master
+A student-centric web application for rigorous mathematical solutions,
+logical reasoning deductions, and adaptive practice problems.
+Creator: Naman Shukla (namanshukla9889@gmail.com)
+"""
 
-import time
 import streamlit as st
-from tutor_prompt import get_system_prompt
-from utils import (
-    load_api_key,
-    get_gemini_response,
-    get_gemini_stream,
-    generate_parent_summary,
-    extract_content_from_file,
-    create_math_artifact,
-    GENAI_AVAILABLE,
-    GENAI_ERROR,
-    GENAI_BACKEND,
-)
-from auth_db import (
-    init_db,
-    register_user,
-    authenticate_user,
-    get_user_details,
-    update_user_profile,
-    change_user_password,
-    get_user_chats,
-    create_db_chat,
-    update_db_chat_title,
-    delete_db_chat,
-    save_db_message,
-    get_db_messages,
-)
+from PIL import Image
+import json
+import database
+import solver
+import formula_book
 
-# Initialize SQLite database for users & persistent chat history
-init_db()
-
-
-# ─────────────────────────────────────────────
-# PAGE CONFIGURATION & LOGO SYSTEM
-# ─────────────────────────────────────────────
-
-def get_starburst_logo(size=26, color="#D97757"):
-    """Returns Claude-style warm coral starburst asterism SVG."""
-    return f"""<svg width="{size}" height="{size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; display: inline-block; flex-shrink: 0;">
-      <line x1="16" y1="3" x2="16" y2="8" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
-      <line x1="16" y1="24" x2="16" y2="29" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
-      <line x1="3" y1="16" x2="8" y2="16" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
-      <line x1="24" y1="16" x2="29" y2="16" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
-      <line x1="6.8" y1="6.8" x2="10.3" y2="10.3" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
-      <line x1="21.7" y1="21.7" x2="25.2" y2="25.2" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
-      <line x1="6.8" y1="25.2" x2="10.3" y2="21.7" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
-      <line x1="21.7" y1="10.3" x2="25.2" y2="6.8" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
-      <circle cx="16" cy="16" r="3.2" fill="{color}"/>
-    </svg>"""
-
+# 1. Page Configuration
 st.set_page_config(
-    page_title="AI Tutor",
-    page_icon="✴️",
+    page_title="ApexSolve | AI Math & Reasoning Master",
+    page_icon="📐",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded"
 )
 
-
-
-# ─────────────────────────────────────────────
-# SESSION STATE INITIALIZATION
-# ─────────────────────────────────────────────
-
-if "chat_sessions" not in st.session_state:
-    st.session_state.chat_sessions = {
-        "Chat 1": {
-            "title": "Chat 1",
-            "messages": [],
-            "gemini_history": [],
-        }
+# 2. Custom CSS for modern student-centric aesthetics
+st.markdown("""
+<style>
+    /* Global styles */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    
+    .stApp {
+        background: radial-gradient(circle at top left, #0f172a, #090d16 100%);
     }
 
-if "active_session_id" not in st.session_state:
-    st.session_state.active_session_id = "Chat 1"
+    /* Hero header */
+    .hero-badge {
+        background: rgba(99, 102, 241, 0.15);
+        border: 1px solid rgba(99, 102, 241, 0.35);
+        color: #a5b4fc;
+        padding: 4px 14px;
+        border-radius: 9999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 8px;
+    }
 
-if "messages" not in st.session_state:
-    st.session_state.messages = st.session_state.chat_sessions["Chat 1"]["messages"]
+    .main-title {
+        font-size: 2.2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #818cf8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 4px;
+    }
 
-if "gemini_history" not in st.session_state:
-    st.session_state.gemini_history = st.session_state.chat_sessions["Chat 1"]["gemini_history"]
+    .sub-title {
+        color: #94a3b8;
+        font-size: 1rem;
+        margin-bottom: 20px;
+    }
 
-if "class_level" not in st.session_state:
-    st.session_state.class_level = 5
+    /* Cards */
+    .card-box {
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(148, 163, 184, 0.15);
+        border-radius: 12px;
+        padding: 18px;
+        margin-bottom: 16px;
+        backdrop-filter: blur(10px);
+    }
 
-if "artifacts" not in st.session_state:
-    st.session_state.artifacts = []
+    .step-card {
+        background: rgba(15, 23, 42, 0.8);
+        border-left: 4px solid #6366f1;
+        border-radius: 0 8px 8px 0;
+        padding: 14px 18px;
+        margin: 12px 0;
+    }
 
-if "active_nav" not in st.session_state:
-    st.session_state.active_nav = "💬 Chat"
+    .concept-card {
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 16px;
+    }
 
-# User Identity & Profile State (Authenticated via SQLite users.db)
-if "user_name" not in st.session_state:
-    st.session_state.user_name = ""
+    .final-answer-card {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.05));
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin: 18px 0;
+    }
 
-if "user_email" not in st.session_state:
-    st.session_state.user_email = ""
+    .practice-card {
+        background: rgba(30, 41, 59, 0.5);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 10px;
+        padding: 16px;
+        margin: 12px 0;
+    }
 
-if "user_id" not in st.session_state:
-    st.session_state.user_id = None
+    .tip-card {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin: 14px 0;
+    }
 
-if "is_logged_in" not in st.session_state:
-    st.session_state.is_logged_in = False
-
-if "font_style" not in st.session_state:
-    st.session_state.font_style = "Modern Sans"
-
-if "notify_solved" not in st.session_state:
-    st.session_state.notify_solved = True
-
-if "focus_mode" not in st.session_state:
-    st.session_state.focus_mode = False
-
-if "session_start_time" not in st.session_state:
-    st.session_state.session_start_time = time.time()
-
-if "show_summary" not in st.session_state:
-    st.session_state.show_summary = False
-
-if "summary_text" not in st.session_state:
-    st.session_state.summary_text = ""
-
-# Claude Settings Modal State
-if "open_settings" not in st.session_state:
-    st.session_state.open_settings = False
-
-if "settings_tab" not in st.session_state:
-    st.session_state.settings_tab = "General"
-
-if "settings_theme" not in st.session_state:
-    st.session_state.settings_theme = "🌙 Dark"
-
-if "transcript_width" not in st.session_state:
-    st.session_state.transcript_width = "Medium"
-
-if "motion_setting" not in st.session_state:
-    st.session_state.motion_setting = "System"
-
-if "voice_lang" not in st.session_state:
-    st.session_state.voice_lang = "English"
-
-if "voice_style" not in st.session_state:
-    st.session_state.voice_style = "Buttery"
-
-if "voice_speed" not in st.session_state:
-    st.session_state.voice_speed = "Normal"
-
-
-
-# ─────────────────────────────────────────────
-# DYNAMIC FONT & BESPOKE LUXURY DARK CSS
-# (ZERO STREAMLIT BRANDING)
-# ─────────────────────────────────────────────
-
-font_css_map = {
-    "Modern Sans": "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
-    "Classic Editorial": "'Newsreader', Georgia, serif",
-    "Clean Mono": "'JetBrains Mono', Consolas, monospace",
-}
-current_font_family = font_css_map.get(st.session_state.font_style, font_css_map["Modern Sans"])
-
-st.markdown(f"""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap');
-
-/* ── Hide Streamlit Branding & Chrome while PRESERVING Sidebar Collapsing ── */
-#MainMenu {{visibility: hidden !important; display: none !important;}}
-footer {{visibility: hidden !important; display: none !important;}}
-[data-testid="stToolbar"] {{display: none !important; visibility: hidden !important;}}
-[data-testid="stDecoration"] {{display: none !important;}}
-[data-testid="stStatusWidget"] {{display: none !important;}}
-.viewerBadge_container__1QSob, [class*="viewerBadge"] {{display: none !important;}}
-[data-testid="manage-app-button"] {{display: none !important;}}
-button[title="View app in Streamlit Community Cloud"] {{display: none !important;}}
-a[href*="streamlit.io"] {{display: none !important;}}
-
-/* Keep header zero-height and transparent so it never covers content */
-header[data-testid="stHeader"] {{
-    background: transparent !important;
-    height: 0px !important;
-    min-height: 0px !important;
-    pointer-events: none !important;
-    border: none !important;
-}}
-
-/* ── Collapsible Left Sidebar Controls (Screen se kinare / bring back) ── */
-/* When sidebar is collapsed, show the toggle button in the top-left margin */
-[data-testid="stSidebarCollapsedControl"] {{
-    pointer-events: auto !important;
-    display: flex !important;
-    visibility: visible !important;
-    position: fixed !important;
-    top: 14px !important;
-    left: 14px !important;
-    z-index: 100000 !important;
-    background: #22201D !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 8px !important;
-    padding: 3px 6px !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
-    transition: all 0.2s ease !important;
-}}
-[data-testid="stSidebarCollapsedControl"]:hover {{
-    background: #2E2C28 !important;
-    border-color: #D97757 !important;
-}}
-[data-testid="stSidebarCollapsedControl"] button {{
-    color: #ECE6DD !important;
-}}
-
-/* Sidebar Collapse button inside the open sidebar */
-[data-testid="stSidebarCollapseButton"] {{
-    visibility: visible !important;
-}}
-[data-testid="stSidebarCollapseButton"] button {{
-    background: transparent !important;
-    border: 1px solid transparent !important;
-    border-radius: 8px !important;
-    color: #9C978D !important;
-    transition: all 0.2s ease !important;
-}}
-[data-testid="stSidebarCollapseButton"] button:hover {{
-    background: #22201D !important;
-    color: #ECE6DD !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
-}}
-
-/* ── Global Canvas & Typography ── */
-html, body, [class*="css"], .stApp {{
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-    color: #ECE6DD !important;
-}}
-.stApp {{
-    background-color: #1F1E1B !important;
-}}
-[data-testid="stSidebar"] {{
-    background-color: #161513 !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
-}}
-
-/* Centered Main Viewport */
-.block-container {{
-    max-width: 840px !important;
-    padding-top: 0.8rem !important;
-    padding-bottom: 6rem !important;
-}}
-
-/* ── Top Bar in Main Canvas ── */
-.claude-top-bar {{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.2rem 0 1rem 0;
-    margin-bottom: 1.2rem;
-}}
-.claude-top-right {{
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-left: auto;
-}}
-.claude-plan-text {{
-    font-size: 0.84rem;
-    color: #8E8B85;
-    font-weight: 500;
-}}
-.claude-upgrade-link {{
-    color: #60A5FA !important;
-    text-decoration: none;
-    font-weight: 600;
-    margin-left: 4px;
-}}
-.claude-upgrade-link:hover {{
-    text-decoration: underline;
-}}
-.claude-ghost-avatar {{
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    color: #C5C2BB;
-}}
-
-/* ── Claude Center Hero Greeting ── */
-.claude-hero-container {{
-    text-align: center;
-    padding: 2.2rem 0.5rem 1.2rem 0.5rem;
-}}
-.claude-hero-title {{
-    font-family: 'Newsreader', Georgia, serif;
-    font-size: 2.85rem;
-    font-weight: 400;
-    color: #ECE6DD;
-    letter-spacing: -0.015em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    margin-bottom: 2rem;
-}}
-
-/* ── Claude Prompt Mockup Card ── */
-.claude-prompt-card {{
-    background: #22201D;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
-    padding: 1.15rem 1.4rem 1rem 1.4rem;
-    text-align: left;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-    margin-bottom: 1.2rem;
-}}
-.claude-prompt-placeholder {{
-    color: #8E8B85;
-    font-size: 1.05rem;
-    padding-bottom: 2rem;
-    user-select: none;
-}}
-.claude-prompt-footer {{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    padding-top: 0.75rem;
-}}
-.claude-prompt-left {{
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}}
-.claude-tool-btn {{
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08);
-    color: #ECE6DD;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    font-weight: 600;
-}}
-.claude-pill-active {{
-    background: #2E2C28;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 9999px;
-    padding: 0.2rem 0.75rem;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #ECE6DD;
-}}
-.claude-pill-subtle {{
-    color: #8E8B85;
-    font-size: 0.82rem;
-    padding: 0.2rem 0.4rem;
-}}
-.claude-prompt-right {{
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}}
-.claude-model-badge {{
-    color: #8E8B85;
-    font-size: 0.82rem;
-}}
-.claude-tool-icon {{
-    font-size: 0.95rem;
-    color: #8E8B85;
-}}
-
-/* ── Claude Quick Action Pills (Buttons) ── */
-div[data-testid="column"] .stButton > button {{
-    background: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid rgba(255, 255, 255, 0.09) !important;
-    border-radius: 9999px !important;
-    color: #C5C2BB !important;
-    font-size: 0.84rem !important;
-    font-weight: 500 !important;
-    padding: 0.35rem 0.8rem !important;
-    transition: all 0.2s ease !important;
-}}
-div[data-testid="column"] .stButton > button:hover {{
-    background: rgba(255, 255, 255, 0.08) !important;
-    border-color: rgba(255, 255, 255, 0.18) !important;
-    color: #FFFFFF !important;
-    transform: translateY(-1px);
-}}
-
-/* ── Sidebar Styling ── */
-[data-testid="stSidebar"] {{
-    background-color: #131315 !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-}}
-[data-testid="stSidebar"] * {{
-    color: #C5C2BB !important;
-}}
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3 {{
-    color: #ECE6DD !important;
-}}
-
-/* Sidebar New Button */
-[data-testid="stSidebar"] .stButton > button {{
-    background: #22201D !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 10px !important;
-    color: #ECE6DD !important;
-    font-weight: 600 !important;
-    font-size: 0.92rem !important;
-    transition: all 0.2s ease !important;
-}}
-[data-testid="stSidebar"] .stButton > button:hover {{
-    background: #2D2B27 !important;
-    border-color: #D97757 !important;
-    color: #FFFFFF !important;
-}}
-
-/* ── Chat Messages ── */
-[data-testid="stChatMessage"] {{
-    background: transparent !important;
-    border: none !important;
-    padding: 0.65rem 0 !important;
-    margin-bottom: 0.4rem !important;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {{
-    display: flex;
-    justify-content: flex-end;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) > div {{
-    background: #242220 !important;
-    border-radius: 18px !important;
-    padding: 0.9rem 1.35rem !important;
-    max-width: 85%;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) > div {{
-    background: #1C1B19 !important;
-    border-radius: 18px !important;
-    padding: 1.3rem 1.6rem !important;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
-}}
-[data-testid="stChatMessage"] p,
-[data-testid="stChatMessage"] li,
-[data-testid="stChatMessage"] span,
-[data-testid="stChatMessage"] div {{
-    color: #ECE6DD !important;
-    font-size: 1.02rem !important;
-    line-height: 1.75 !important;
-}}
-[data-testid="stChatMessage"] strong {{
-    color: #E29278 !important;
-    font-weight: 700;
-}}
-[data-testid="stChatMessage"] code {{
-    background: #121214 !important;
-    color: #F59E0B !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    padding: 0.15rem 0.4rem !important;
-    border-radius: 6px !important;
-    font-family: 'JetBrains Mono', monospace !important;
-}}
-
-/* ── KaTeX Formulas ── */
-.katex, .katex * {{
-    color: #ECE6DD !important;
-    font-size: 1.08em !important;
-}}
-.katex-display {{
-    background: rgba(217, 119, 87, 0.08) !important;
-    border-left: 3px solid #D97757 !important;
-    border-radius: 8px !important;
-    padding: 0.75rem 1rem !important;
-    margin: 0.85rem 0 !important;
-}}
-
-/* ── Floating Prompt Input ── */
-[data-testid="stChatInput"] {{
-    background: #22201D !important;
-    border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 20px !important;
-    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45) !important;
-    transition: all 0.25s ease;
-}}
-[data-testid="stChatInput"]:focus-within {{
-    border-color: #D97757 !important;
-    box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.3) !important;
-}}
-[data-testid="stChatInput"] textarea {{
-    color: #ECE6DD !important;
-    font-size: 1.02rem !important;
-}}
-[data-testid="stChatInput"] textarea::placeholder {{
-    color: #8E8B85 !important;
-}}
-
-/* ── Artifact & Card Container ── */
-.artifact-box {{
-    background: #1E1D1B;
-    border: 1.5px solid rgba(217, 119, 87, 0.35);
-    border-radius: 14px;
-    padding: 1.25rem 1.45rem;
-    margin: 1rem 0;
-}}
-.artifact-box-title {{
-    font-size: 1.08rem;
-    font-weight: 700;
-    color: #ECE6DD;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.35rem;
-}}
-.artifact-box-desc {{
-    font-size: 0.88rem;
-    color: #9C978D;
-    margin-bottom: 0.9rem;
-    line-height: 1.6;
-}}
-
-/* ── Focus Banner ── */
-.focus-banner {{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(217, 119, 87, 0.12);
-    border: 1px solid rgba(217, 119, 87, 0.3);
-    border-radius: 12px;
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
-    color: #ECE6DD;
-    margin-bottom: 1.2rem;
-}}
-
-/* ── Download Button Styling ── */
-.stDownloadButton > button {{
-    background: linear-gradient(135deg, #D97757 0%, #C86544 100%) !important;
-    border: none !important;
-    border-radius: 10px !important;
-    color: #FFFFFF !important;
-    font-weight: 700 !important;
-}}
-
-/* ── Claude Settings Modal Dialog ── */
-div[data-testid="stDialog"] > div {{
-    background-color: #18181A !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 18px !important;
-    color: #ECE6DD !important;
-    max-width: 860px !important;
-    padding: 1.5rem !important;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7) !important;
-}}
-div[data-testid="stDialog"] h2 {{
-    color: #ECE6DD !important;
-    font-size: 1.25rem !important;
-    font-weight: 600 !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-    padding-bottom: 0.7rem !important;
-    margin-bottom: 1rem !important;
-}}
-div[data-testid="stDialog"] button[aria-label="Close"] {{
-    color: #9C978D !important;
-}}
-div[data-testid="stDialog"] button[aria-label="Close"]:hover {{
-    color: #ECE6DD !important;
-}}
-
-/* Modal Sidebar Search Box */
-div[data-testid="stDialog"] input {{
-    background-color: #141312 !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 8px !important;
-    color: #ECE6DD !important;
-    font-size: 0.88rem !important;
-}}
-
-/* Modal Segmented Controls */
-[data-testid="stSegmentedControl"] {{
-    background: #1C1B19 !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 10px !important;
-    padding: 3px !important;
-}}
-[data-testid="stSegmentedControl"] button {{
-    border-radius: 7px !important;
-    color: #9C978D !important;
-    font-size: 0.84rem !important;
-    padding: 4px 12px !important;
-    border: none !important;
-}}
-[data-testid="stSegmentedControl"] button[aria-checked="true"] {{
-    background: #2E2C28 !important;
-    color: #ECE6DD !important;
-    font-weight: 600 !important;
-}}
-
-/* ── Claude Command Board (Interactive Center Composer) ── */
-.claude-composer-shell {{
-    max-width: 760px !important;
-    margin: 0 auto 1.2rem auto !important;
-}}
-.claude-composer-shell [data-testid="stForm"] {{
-    background: #242220 !important;
-    background-color: #242220 !important;
-    border: 1px solid #363430 !important;
-    border-radius: 18px !important;
-    padding: 16px 20px 14px 20px !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
-    transition: all 0.2s ease !important;
-}}
-.claude-composer-shell [data-testid="stForm"]:focus-within {{
-    border-color: #4D4943 !important;
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55) !important;
-}}
-
-/* Remove borders, backgrounds, and outlines from Streamlit text area */
-.claude-composer-shell [data-testid="stTextArea"],
-.claude-composer-shell [data-testid="stTextArea"] > div,
-.claude-composer-shell [data-testid="stTextArea"] > div > div {{
-    background: transparent !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-}}
-.claude-composer-shell [data-testid="stTextArea"] > div:focus-within {{
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-}}
-.claude-composer-shell textarea {{
-    background: transparent !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-    color: #ECE6DD !important;
-    font-size: 1.05rem !important;
-    padding: 0 !important;
-    line-height: 1.6 !important;
-    resize: none !important;
-}}
-.claude-composer-shell textarea:focus {{
-    outline: none !important;
-    border: none !important;
-    box-shadow: none !important;
-}}
-.claude-composer-shell textarea::placeholder {{
-    color: #8E8B85 !important;
-    font-weight: 400 !important;
-}}
-
-/* Hide "Press Ctrl+Enter to submit form" */
-.claude-composer-shell [data-testid="InputInstructions"] {{
-    display: none !important;
-    visibility: hidden !important;
-    height: 0 !important;
-}}
-
-/* Submit button in command board: Claude circular coral button */
-.claude-composer-shell [data-testid="stFormSubmitButton"] button,
-.claude-composer-shell button[kind="primary"],
-.claude-composer-shell button[data-testid="baseButton-primary"] {{
-    background-color: #D97757 !important;
-    background: #D97757 !important;
-    border: none !important;
-    border-radius: 50% !important;
-    color: #FFFFFF !important;
-    font-size: 1.3rem !important;
-    font-weight: 700 !important;
-    width: 38px !important;
-    min-width: 38px !important;
-    max-width: 38px !important;
-    height: 38px !important;
-    min-height: 38px !important;
-    max-height: 38px !important;
-    padding: 0 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-shadow: 0 4px 14px rgba(217, 119, 87, 0.4) !important;
-    cursor: pointer !important;
-    transition: transform 0.15s ease, background 0.15s ease !important;
-}}
-.claude-composer-shell [data-testid="stFormSubmitButton"] button:hover,
-.claude-composer-shell button[kind="primary"]:hover {{
-    background-color: #E28365 !important;
-    background: #E28365 !important;
-    transform: scale(1.06) !important;
-}}
-.claude-composer-shell [data-testid="stFormSubmitButton"] button:active {{
-    transform: scale(0.96) !important;
-}}
-
-/* Attach button & expander in command board */
-.claude-composer-shell details {{
-    background: transparent !important;
-    border: 1px dashed rgba(255, 255, 255, 0.1) !important;
-    border-radius: 12px !important;
-    margin: 8px 0 !important;
-    padding: 4px 10px !important;
-}}
-.claude-composer-shell details summary {{
-    color: #9C978D !important;
-    font-size: 0.84rem !important;
-    cursor: pointer !important;
-}}
-.claude-composer-shell details[open] {{
-    background: rgba(255, 255, 255, 0.02) !important;
-    border-color: rgba(217, 119, 87, 0.3) !important;
-}}
-.claude-composer-shell [data-testid="stFileUploader"] {{
-    padding: 0 !important;
-}}
-
-/* 5 Action Pills below Command Board */
-.claude-action-pills {{
-    max-width: 760px !important;
-    margin: 0 auto 1.5rem auto !important;
-}}
-.claude-action-pills [data-testid="column"] button,
-.claude-action-pills button {{
-    background: #242220 !important;
-    background-color: #242220 !important;
-    border: 1px solid #363430 !important;
-    border-radius: 12px !important;
-    color: #C4BFB5 !important;
-    font-size: 0.88rem !important;
-    font-weight: 500 !important;
-    padding: 0.45rem 0.8rem !important;
-    min-height: 38px !important;
-    transition: all 0.2s ease !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
-}}
-.claude-action-pills [data-testid="column"] button:hover,
-.claude-action-pills button:hover {{
-    background: #2D2B28 !important;
-    background-color: #2D2B28 !important;
-    border-color: #4D4943 !important;
-    color: #ECE6DD !important;
-    transform: translateY(-1px) !important;
-}}
-
-/* Claude Bottom Fixed Chat Input */
-[data-testid="stChatInput"] {{
-    background: transparent !important;
-    border: none !important;
-}}
-[data-testid="stChatInput"] > div {{
-    background: #242220 !important;
-    border: 1px solid #363430 !important;
-    border-radius: 16px !important;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45) !important;
-    max-width: 760px !important;
-    margin: 0 auto !important;
-}}
-[data-testid="stChatInput"] > div:focus-within {{
-    border-color: #4D4943 !important;
-}}
-[data-testid="stChatInput"] textarea {{
-    color: #ECE6DD !important;
-    font-size: 1rem !important;
-}}
-[data-testid="stChatInput"] button {{
-    background: #D97757 !important;
-    color: white !important;
-    border-radius: 50% !important;
-}}
+    /* Buttons */
+    .stButton>button {
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s ease-in-out;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 
-# ─────────────────────────────────────────────
-# LOAD API KEY (once per session)
-# ─────────────────────────────────────────────
+# 3. Session State Initialization
+if "user" not in st.session_state:
+    st.session_state["user"] = None
 
-@st.cache_resource
-def get_api_key():
-    """Load API key from .env (locally) or st.secrets (Streamlit Cloud)."""
-    try:
-        return load_api_key(), None
-    except ValueError as e:
-        return None, str(e)
+if "current_solution" not in st.session_state:
+    st.session_state["current_solution"] = None
 
+if "current_question_text" not in st.session_state:
+    st.session_state["current_question_text"] = ""
 
-api_key, key_error = get_api_key()
+if "saved_question_id" not in st.session_state:
+    st.session_state["saved_question_id"] = None
 
 
-# ─────────────────────────────────────────────
-# HELPER: Message and Session Sync (SQLite Persistent)
-# ─────────────────────────────────────────────
-
-def load_user_sessions(user_id: int):
-    """Loads all saved chat sessions from SQLite database for the user."""
-    db_chats = get_user_chats(user_id)
-    st.session_state.chat_sessions = {}
-    if db_chats:
-        for c in db_chats:
-            st.session_state.chat_sessions[c["id"]] = {
-                "title": c["title"],
-                "created_at": c.get("created_at", ""),
-                "updated_at": c.get("updated_at", ""),
-                "messages": [],
-                "gemini_history": [],
-                "loaded": False,
-            }
-        first_cid = db_chats[0]["id"]
-    else:
-        first_cid = f"chat_{user_id}_{int(time.time())}"
-        create_db_chat(user_id, first_cid, "New Chat")
-        st.session_state.chat_sessions[first_cid] = {
-            "title": "New Chat",
-            "created_at": "Just now",
-            "updated_at": "Just now",
-            "messages": [],
-            "gemini_history": [],
-            "loaded": True,
-        }
-
-    st.session_state.active_session_id = first_cid
-    # Load messages for the active session
-    msgs = get_db_messages(first_cid, user_id)
-    st.session_state.messages = msgs
-    st.session_state.gemini_history = [
-        {"role": "model" if m["role"] == "assistant" else "user", "parts": [m["content"]]}
-        for m in msgs
-    ]
-    st.session_state.chat_sessions[first_cid]["messages"] = st.session_state.messages
-    st.session_state.chat_sessions[first_cid]["gemini_history"] = st.session_state.gemini_history
-    st.session_state.chat_sessions[first_cid]["loaded"] = True
-
-
-def add_message(role: str, content: str, image=None, file_meta=None):
-    """Save message for display, Gemini context, and SQLite persistent history."""
-    author = st.session_state.user_name if role == "user" else "AI Tutor"
-    st.session_state.messages.append({
-        "role": role,
-        "content": content,
-        "image": image,
-        "file_meta": file_meta,
-        "author": author,
-    })
-    gemini_role = "model" if role == "assistant" else "user"
-    st.session_state.gemini_history.append({
-        "role": gemini_role,
-        "parts": [content],
-    })
-    # Sync with active chat session in session state
-    sid = st.session_state.active_session_id
-    if sid in st.session_state.chat_sessions:
-        st.session_state.chat_sessions[sid]["messages"] = st.session_state.messages
-        st.session_state.chat_sessions[sid]["gemini_history"] = st.session_state.gemini_history
-
-    # Persist message to SQLite users.db
-    uid = st.session_state.get("user_id")
-    if uid and sid:
-        save_db_message(sid, uid, role, content, author)
-
-
-def send_to_tutor(user_text: str, image=None, file_meta=None):
-    """Send user query to Gemini, receives worked solution + similar practice."""
-    add_message("user", user_text, image=image, file_meta=file_meta)
-
-    system_prompt = get_system_prompt(st.session_state.class_level)
-
-    with st.spinner("AI Tutor is analyzing & drafting solution... 📐"):
-        reply = get_gemini_response(
-            api_key=api_key,
-            system_prompt=system_prompt,
-            chat_history=st.session_state.gemini_history[:-1],
-            user_message=user_text,
-        )
-
-    add_message("assistant", reply)
-
-    # Auto-rename active chat session title in session state & SQLite
-    sid = st.session_state.active_session_id
-    uid = st.session_state.get("user_id")
-    if sid in st.session_state.chat_sessions:
-        curr_t = st.session_state.chat_sessions[sid]["title"]
-        if curr_t.startswith("Chat ") or curr_t == "New Chat":
-            new_title = user_text[:28].strip() + ("..." if len(user_text) > 28 else "")
-            st.session_state.chat_sessions[sid]["title"] = new_title
-            if uid:
-                update_db_chat_title(sid, uid, new_title)
-
-    if st.session_state.notify_solved:
-        st.toast("🎯 Solution & practice problem prepared!", icon="⭐")
-
-
-# ─────────────────────────────────────────────
-# AUTHENTICATION GATEWAY (LOGIN / SIGN UP SCREEN)
-# ─────────────────────────────────────────────
-
-if not st.session_state.is_logged_in:
-    st.markdown(
-        f"""
-        <div style="text-align: center; margin-top: 1.5rem; margin-bottom: 2rem;">
-            <div style="display: inline-flex; align-items: center; justify-content: center; width: 68px; height: 68px; border-radius: 20px; background: rgba(217, 119, 87, 0.12); border: 1px solid rgba(217, 119, 87, 0.35); margin-bottom: 1.1rem; box-shadow: 0 10px 30px rgba(217, 119, 87, 0.2);">
-                {get_starburst_logo(size=38)}
-            </div>
-            <h1 style="font-family: 'Newsreader', Georgia, serif; font-size: 2.5rem; font-weight: 400; color: #ECE6DD; margin: 0; letter-spacing: -0.02em;">AI Tutor</h1>
-            <p style="color: #9C978D; font-size: 1.05rem; margin-top: 0.6rem; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.5;">
-                Master mathematics with step-by-step conceptual explanations, personalized practice problems, and your private workspace.
-            </p>
+# 4. Authentication Views
+def render_auth_page():
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("""
+        <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+            <div class="hero-badge">🎓 AI Student Portal</div>
+            <h1 class="main-title">ApexSolve</h1>
+            <p class="sub-title">Smart Mathematics & Logical Reasoning Master with Step-by-Step Proofs & Practice Arena</p>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """, unsafe_allow_html=True)
 
-    auth_col1, auth_col2, auth_col3 = st.columns([1, 2.6, 1])
-    with auth_col2:
-        tab_login, tab_signup = st.tabs(["🔑 Log In", "✨ Create Account"])
+        auth_tab1, auth_tab2 = st.tabs(["🔑 Student Login", "📝 New Student Registration"])
 
-        with tab_login:
-            st.markdown("<p style='color: #8c8c96; font-size: 0.9rem; margin-top: 0.5rem; margin-bottom: 1rem;'>Enter your email and password to access your tutoring sessions.</p>", unsafe_allow_html=True)
-            with st.form("login_form", clear_on_submit=False):
-                login_email = st.text_input("Email Address", placeholder="name@example.com")
-                login_password = st.text_input("Password", type="password", placeholder="••••••••")
-                submit_login = st.form_submit_button("Sign In →", use_container_width=True, type="primary")
+        with auth_tab1:
+            st.markdown("### Sign In to Your Learning Space")
+            login_email = st.text_input("Student Email", key="login_email_input", placeholder="student@example.com")
+            login_pass = st.text_input("Password", type="password", key="login_pass_input")
 
-                if submit_login:
-                    if not login_email.strip() or not login_password.strip():
-                        st.error("⚠️ Please enter both your email and password.")
+            col_sub, col_demo = st.columns([1, 1])
+            with col_sub:
+                if st.button("🚀 Sign In", use_container_width=True, type="primary"):
+                    if not login_email or not login_pass:
+                        st.error("Please fill in both email and password.")
                     else:
-                        success, user_data, msg = authenticate_user(login_email, login_password)
-                        if success and user_data:
-                            st.session_state.is_logged_in = True
-                            st.session_state.user_name = user_data["name"]
-                            st.session_state.user_email = user_data["email"]
-                            st.session_state.class_level = user_data.get("class_level", 8)
-                            st.session_state.user_id = user_data["id"]
-                            load_user_sessions(user_data["id"])
-                            st.success(f"✅ Welcome back, {user_data['name']}! Loading workspace...")
-                            time.sleep(0.3)
+                        success, msg, user_data = database.authenticate_user(login_email, login_pass)
+                        if success:
+                            st.session_state["user"] = user_data
+                            st.success(msg)
                             st.rerun()
                         else:
-                            st.error(f"❌ {msg}")
+                            st.error(msg)
 
-            st.markdown(
-                """
-                <div style="background: rgba(217, 119, 87, 0.08); border: 1px dashed rgba(217, 119, 87, 0.35); border-radius: 12px; padding: 0.85rem 1rem; margin-top: 1.2rem; font-size: 0.85rem; color: #e0947c;">
-                    <b>💡 Demo Account:</b><br/>
-                    Email: <code>ramanshukla2005@gmail.com</code> &nbsp;•&nbsp; Password: <code>naman123</code>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            if st.button("🚀 Fast Login as Naman Shukla", use_container_width=True, key="fast_demo_login"):
-                success, user_data, msg = authenticate_user("ramanshukla2005@gmail.com", "naman123")
-                if success and user_data:
-                    st.session_state.is_logged_in = True
-                    st.session_state.user_name = user_data["name"]
-                    st.session_state.user_email = user_data["email"]
-                    st.session_state.class_level = user_data.get("class_level", 10)
-                    st.session_state.user_id = user_data["id"]
-                    load_user_sessions(user_data["id"])
-                    st.rerun()
-
-        with tab_signup:
-            st.markdown("<p style='color: #8c8c96; font-size: 0.9rem; margin-top: 0.5rem; margin-bottom: 1rem;'>Create a free account to track your math progress and worksheets.</p>", unsafe_allow_html=True)
-            with st.form("signup_form", clear_on_submit=False):
-                reg_name = st.text_input("Full Name", placeholder="e.g. Naman Shukla")
-                reg_email = st.text_input("Email Address", placeholder="name@example.com")
-                reg_class = st.selectbox("Select Your School Class:", options=list(range(1, 13)), index=7, help="Adjusts math difficulty and curriculum")
-                reg_password = st.text_input("Create Password", type="password", placeholder="At least 6 characters")
-                reg_confirm = st.text_input("Confirm Password", type="password", placeholder="Re-enter password")
-                submit_signup = st.form_submit_button("Create Account ✨", use_container_width=True, type="primary")
-
-                if submit_signup:
-                    if not reg_name.strip():
-                        st.error("⚠️ Please enter your full name.")
-                    elif not reg_email.strip() or "@" not in reg_email or "." not in reg_email:
-                        st.error("⚠️ Please enter a valid email address.")
-                    elif len(reg_password) < 6:
-                        st.error("⚠️ Password must be at least 6 characters long.")
-                    elif reg_password != reg_confirm:
-                        st.error("⚠️ Passwords do not match. Please verify and try again.")
+            with col_demo:
+                if st.button("⚡ Quick Demo Login", use_container_width=True, help="Instant 1-click login for demonstration"):
+                    success, msg, user_data = database.authenticate_user("namanshukla9889@gmail.com", "naman123")
+                    if success:
+                        st.session_state["user"] = user_data
+                        st.success("Welcome, Naman Shukla!")
+                        st.rerun()
                     else:
-                        created, reg_msg = register_user(reg_name, reg_email, reg_password, reg_class)
-                        if created:
-                            ok, udata, _ = authenticate_user(reg_email, reg_password)
-                            if ok and udata:
-                                st.session_state.is_logged_in = True
-                                st.session_state.user_name = udata["name"]
-                                st.session_state.user_email = udata["email"]
-                                st.session_state.class_level = udata.get("class_level", reg_class)
-                                st.session_state.user_id = udata["id"]
-                                load_user_sessions(udata["id"])
-                                st.success("🎉 Account created successfully! Launching AI Tutor...")
-                                time.sleep(0.4)
-                                st.rerun()
-                            else:
-                                st.success(reg_msg)
-                        else:
-                            st.error(f"❌ {reg_msg}")
+                        st.error(msg)
 
-    # Stop execution: Ensure NO chat, projects, or tutor features are accessible while logged out!
-    st.stop()
+            st.caption("💡 Quick demo credentials: `namanshukla9889@gmail.com` | `naman123`")
 
-# Ensure sessions are loaded if logged in
-if st.session_state.is_logged_in and (not st.session_state.chat_sessions or not any(st.session_state.chat_sessions.values())):
-    load_user_sessions(st.session_state.user_id)
+        with auth_tab2:
+            st.markdown("### Create Your Free Student Account")
+            new_name = st.text_input("Full Name", placeholder="e.g. Naman Shukla", key="reg_name")
+            new_email = st.text_input("Email Address", placeholder="e.g. namanshukla9889@gmail.com", key="reg_email")
+            new_pass = st.text_input("Create Password (min 6 characters)", type="password", key="reg_pass")
+            target_exam = st.selectbox(
+                "Target Examination / Focus",
+                ["JEE Mains & Advanced", "SSC CGL / Banking / Railways", "CAT / Management Aptitude", "Olympiad / High School", "University / College Degree", "General Aptitude"],
+                key="reg_exam"
+            )
+
+            if st.button("✨ Create Student Account", use_container_width=True, type="primary"):
+                success, msg, user_data = database.register_user(new_name, new_email, new_pass, target_exam)
+                if success:
+                    st.session_state["user"] = user_data
+                    st.success(f"Welcome aboard, {new_name}! Redirecting...")
+                    st.rerun()
+                else:
+                    st.error(msg)
 
 
-# ─────────────────────────────────────────────
-# CLAUDE SETTINGS MODAL DIALOG
-# ─────────────────────────────────────────────
+# 5. Main Application Header & Sidebar
+def render_sidebar():
+    user = st.session_state["user"]
+    with st.sidebar:
+        st.markdown(f"""
+        <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 10px; padding: 12px; margin-bottom: 16px;">
+            <div style="font-weight: 700; color: #f8fafc; font-size: 1.05rem;">👤 {user['name']}</div>
+            <div style="color: #94a3b8; font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis;">{user['email']}</div>
+            <div style="margin-top: 6px; font-size: 0.75rem; background: rgba(99,102,241,0.25); color: #c7d2fe; display: inline-block; padding: 2px 8px; border-radius: 4px;">
+                🎯 {user.get('target_exam', 'General')}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-@st.dialog("Settings", width="large")
-def render_settings_dialog():
-    uid = st.session_state.get("user_id", 1)
-    col_modal_l, col_modal_r = st.columns([1.1, 2.7])
-
-    with col_modal_l:
-        search_query = st.text_input(
-            "Search",
-            placeholder="🔍 Search",
-            label_visibility="collapsed",
-            key="dlg_search_input",
-        ).strip().lower()
-
-        st.markdown(
-            "<div style='font-size: 0.74rem; font-weight: 600; color: #787570; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 6px; margin-bottom: 6px;'>Settings</div>",
-            unsafe_allow_html=True,
+        menu = st.radio(
+            "Navigation",
+            ["🚀 AI Solver", "🎯 Practice Arena", "📚 Concept Handbook", "🕒 Saved History", "📊 My Analytics", "⚙️ Profile Settings"],
+            label_visibility="collapsed"
         )
 
-        settings_nav = [
-            ("⚙️ General", "General"),
-            ("👤 Account", "Account"),
-            ("🛡️ Privacy", "Privacy"),
-            ("💳 Billing", "Billing"),
-            ("💼 Capabilities", "Capabilities"),
-            ("🔄 Memory", "Memory"),
-            ("🪞 Reflect", "Reflect"),
-            ("🌙 Time and focus", "Time and focus"),
-            ("💻 Claude Code", "Claude Code"),
-        ]
+        st.markdown("---")
+        
+        # Scratchpad widget in sidebar
+        with st.expander("📝 Student Scratchpad / Rough Work"):
+            scratch_text = st.text_area("Jot quick steps or numbers here:", height=140, key="sidebar_scratchpad")
+            if scratch_text:
+                st.caption(f"Chars: {len(scratch_text)}")
 
-        for label, val in settings_nav:
-            if not search_query or search_query in val.lower() or search_query in label.lower():
-                is_active = (st.session_state.settings_tab == val)
-                btn_display = f"👉 **{val}**" if is_active else label
-                if st.button(btn_display, key=f"dlg_tab_btn_{val}", use_container_width=True):
-                    st.session_state.settings_tab = val
-                    st.rerun()
+        st.markdown("---")
+        if st.button("🚪 Logout", use_container_width=True):
+            st.session_state["user"] = None
+            st.session_state["current_solution"] = None
+            st.rerun()
 
-        st.markdown(
-            "<div style='font-size: 0.74rem; font-weight: 600; color: #787570; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 14px; margin-bottom: 6px;'>Customize</div>",
-            unsafe_allow_html=True,
+        st.markdown("""
+        <div style="text-align: center; color: #64748b; font-size: 0.75rem; margin-top: 20px;">
+            ApexSolve v2.0 • Designed for Students<br>
+            Maths & Reasoning Engine
+        </div>
+        """, unsafe_allow_html=True)
+
+        return menu
+
+
+# 6. View: AI Solver
+def render_solver_view():
+    user = st.session_state["user"]
+    st.markdown("""
+    <div>
+        <div class="hero-badge">📐 Instant Math & Reasoning Solver</div>
+        <h2 class="main-title" style="font-size: 1.8rem;">Solve Any Mathematics or Logical Problem</h2>
+        <p class="sub-title">Type a question, pick an example, or upload an image to receive a rigorous step-by-step proof and similar practice problems.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Category selector and presets
+    col_mode, col_presets = st.columns([1, 2])
+    with col_mode:
+        preferred_cat = st.selectbox(
+            "Select Problem Domain",
+            ["Auto-Detect", "Mathematics", "Reasoning"],
+            help="Choose the problem domain or let AI auto-detect"
         )
 
-        customize_nav = [
-            ("📑 Skills", "Skills"),
-            ("🪢 Connectors", "Connectors"),
-            ("🧩 Plugins", "Plugins"),
-        ]
+    with col_presets:
+        st.markdown("<div style='font-size:0.85rem; color:#94a3b8; margin-bottom:4px;'>💡 Quick Test Examples:</div>", unsafe_allow_html=True)
+        ex_col1, ex_col2, ex_col3, ex_col4 = st.columns(4)
+        preset_question = None
+        if ex_col1.button("Algebra", use_container_width=True):
+            preset_question = "Find the roots of 3x^2 - 10x + 3 = 0 using factorization and quadratic formula."
+        if ex_col2.button("Calculus", use_container_width=True):
+            preset_question = "Evaluate the definite integral of (3x^2 + 2x - 5) dx from x = 1 to x = 3."
+        if ex_col3.button("Series", use_container_width=True):
+            preset_question = "Find the missing number in the sequence: 4, 9, 19, 39, 79, ?"
+        if ex_col4.button("Relations", use_container_width=True):
+            preset_question = "A is the brother of B. B is the daughter of C. D is the father of C. How is A related to D?"
 
-        for label, val in customize_nav:
-            if not search_query or search_query in val.lower() or search_query in label.lower():
-                is_active = (st.session_state.settings_tab == val)
-                btn_display = f"👉 **{val}**" if is_active else label
-                if st.button(btn_display, key=f"dlg_tab_btn_{val}", use_container_width=True):
-                    st.session_state.settings_tab = val
-                    st.rerun()
+    # Question Input
+    default_text = preset_question if preset_question else st.session_state["current_question_text"]
+    q_input = st.text_area(
+        "Enter your Math or Reasoning Question:",
+        value=default_text,
+        height=110,
+        placeholder="e.g. Solve: If 6 men can complete a work in 12 days, how many men are needed to complete the work in 8 days? Or paste a reasoning series..."
+    )
 
-    with col_modal_r:
-        cur_tab = st.session_state.get("settings_tab", "General")
+    # Optional image upload
+    uploaded_image = st.file_uploader("📷 Upload Problem Image (Optional)", type=["png", "jpg", "jpeg"])
+    pil_image = None
+    if uploaded_image:
+        pil_image = Image.open(uploaded_image)
+        st.image(pil_image, caption="Uploaded Problem Image", width=320)
 
-        if cur_tab == "General":
-            # ── SECTION: Appearance ──
-            st.markdown("<h3 style='margin: 0 0 1.2rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Appearance</h3>", unsafe_allow_html=True)
+    # Action Buttons
+    col_solve, col_clear = st.columns([1, 4])
+    with col_solve:
+        solve_pressed = st.button("⚡ Solve with Detail", type="primary", use_container_width=True)
 
-            # Theme
-            col_t_l, col_t_r = st.columns([1.3, 1.7])
-            with col_t_l:
-                st.markdown("<div style='padding-top: 6px; font-weight: 500; color: #ECE6DD;'>Theme</div>", unsafe_allow_html=True)
-            with col_t_r:
-                theme_val = st.segmented_control(
-                    "Theme",
-                    options=["💻 System", "☀️ Light", "🌙 Dark"],
-                    default=st.session_state.get("settings_theme", "🌙 Dark"),
-                    key="modal_theme_choice",
-                    label_visibility="collapsed",
-                )
-                if theme_val and theme_val != st.session_state.settings_theme:
-                    st.session_state.settings_theme = theme_val
-
-            st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
-
-            # Chat Font
-            col_f_l, col_f_r = st.columns([1.3, 1.7])
-            with col_f_l:
-                st.markdown("<div style='padding-top: 6px; font-weight: 500; color: #ECE6DD;'>Chat font</div>", unsafe_allow_html=True)
-            with col_f_r:
-                font_display_map = {
-                    "Anthropic Serif": "Classic Editorial",
-                    "Modern Sans": "Modern Sans",
-                    "Clean Mono": "Clean Mono",
-                }
-                reverse_map = {"Classic Editorial": "Anthropic Serif", "Modern Sans": "Modern Sans", "Clean Mono": "Clean Mono"}
-                current_display = reverse_map.get(st.session_state.font_style, "Anthropic Serif")
-                sel_f = st.selectbox(
-                    "Chat font",
-                    options=["Anthropic Serif", "Modern Sans", "Clean Mono"],
-                    index=["Anthropic Serif", "Modern Sans", "Clean Mono"].index(current_display),
-                    key="modal_font_select",
-                    label_visibility="collapsed",
-                )
-                actual_font = font_display_map.get(sel_f, "Classic Editorial")
-                if actual_font != st.session_state.font_style:
-                    st.session_state.font_style = actual_font
-                    st.rerun()
-
-            st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
-
-            # Transcript Width
-            col_w_l, col_w_r = st.columns([1.3, 1.7])
-            with col_w_l:
-                st.markdown("<div><b style='color: #ECE6DD;'>Transcript width</b><div style='color: #787570; font-size: 0.78rem;'>Maximum width of the transcript and composer columns.</div></div>", unsafe_allow_html=True)
-            with col_w_r:
-                w_val = st.segmented_control(
-                    "Transcript width",
-                    options=["Narrow", "Medium", "Wide"],
-                    default=st.session_state.get("transcript_width", "Medium"),
-                    key="modal_width_choice",
-                    label_visibility="collapsed",
-                )
-                if w_val and w_val != st.session_state.transcript_width:
-                    st.session_state.transcript_width = w_val
-
-            st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
-
-            # Motion
-            col_m_l, col_m_r = st.columns([1.3, 1.7])
-            with col_m_l:
-                st.markdown("<div><b style='color: #ECE6DD;'>Motion</b><div style='color: #787570; font-size: 0.78rem;'>Reduce animation in streaming responses and other interface elements.</div></div>", unsafe_allow_html=True)
-            with col_m_r:
-                m_val = st.segmented_control(
-                    "Motion",
-                    options=["System", "Reduced"],
-                    default=st.session_state.get("motion_setting", "System"),
-                    key="modal_motion_choice",
-                    label_visibility="collapsed",
-                )
-                if m_val and m_val != st.session_state.motion_setting:
-                    st.session_state.motion_setting = m_val
-
-            st.markdown("<hr style='border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 1.6rem 0;'>", unsafe_allow_html=True)
-
-            # ── SECTION: Voice ──
-            st.markdown("<h3 style='margin: 0 0 1.2rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Voice</h3>", unsafe_allow_html=True)
-
-            col_v1_l, col_v1_r = st.columns([1.3, 1.7])
-            with col_v1_l:
-                st.markdown("<div style='padding-top: 6px; font-weight: 500; color: #ECE6DD;'>Language</div>", unsafe_allow_html=True)
-            with col_v1_r:
-                v_lang = st.selectbox(
-                    "Voice Language",
-                    options=["English", "Hindi", "Spanish", "French", "German"],
-                    index=["English", "Hindi", "Spanish", "French", "German"].index(st.session_state.get("voice_lang", "English")),
-                    key="modal_voice_lang",
-                    label_visibility="collapsed",
-                )
-                if v_lang != st.session_state.voice_lang:
-                    st.session_state.voice_lang = v_lang
-
-            st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
-
-            col_v2_l, col_v2_r = st.columns([1.3, 1.7])
-            with col_v2_l:
-                st.markdown("<div style='padding-top: 6px; font-weight: 500; color: #ECE6DD;'>Style</div>", unsafe_allow_html=True)
-            with col_v2_r:
-                v_style = st.selectbox(
-                    "Voice Style",
-                    options=["Buttery", "Natural", "Calm", "Crisp"],
-                    index=["Buttery", "Natural", "Calm", "Crisp"].index(st.session_state.get("voice_style", "Buttery")),
-                    key="modal_voice_style",
-                    label_visibility="collapsed",
-                )
-                if v_style != st.session_state.voice_style:
-                    st.session_state.voice_style = v_style
-
-            st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
-
-            col_v3_l, col_v3_r = st.columns([1.3, 1.7])
-            with col_v3_l:
-                st.markdown("<div style='padding-top: 6px; font-weight: 500; color: #ECE6DD;'>Speed</div>", unsafe_allow_html=True)
-            with col_v3_r:
-                v_spd = st.selectbox(
-                    "Voice Speed",
-                    options=["Normal", "Slow", "Fast"],
-                    index=["Normal", "Slow", "Fast"].index(st.session_state.get("voice_speed", "Normal")),
-                    key="modal_voice_speed",
-                    label_visibility="collapsed",
-                )
-                if v_spd != st.session_state.voice_speed:
-                    st.session_state.voice_speed = v_spd
-
-        elif cur_tab == "Account":
-            st.markdown("<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Profile & Account</h3>", unsafe_allow_html=True)
-            user_info = get_user_details(uid) if uid else {}
-            initials = (st.session_state.user_name[:2].upper() if st.session_state.user_name else "NS")
-            member_since = user_info.get("created_at", "October 2026") if user_info else "October 2026"
-            total_chats = user_info.get("total_chats", len(st.session_state.chat_sessions)) if user_info else 0
-
-            # Pure Profile Details Card
-            st.markdown(
-                f"""
-                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.2rem; margin-bottom: 1.2rem;">
-                    <div style="display: flex; align-items: center; gap: 14px;">
-                        <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #DA7756, #c25f3f); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #ffffff; font-size: 1.35rem; box-shadow: 0 4px 14px rgba(218, 119, 86, 0.35);">
-                            {initials}
-                        </div>
-                        <div>
-                            <div style="font-weight: 700; color: #ECE6DD; font-size: 1.18rem;">{st.session_state.user_name}</div>
-                            <div style="color: #9C978D; font-size: 0.88rem; margin-top: 2px;">{st.session_state.user_email}</div>
-                        </div>
-                        <div style="margin-left: auto;">
-                            <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 20px; padding: 0.28rem 0.8rem; font-size: 0.8rem; font-weight: 600;">Active Scholar</span>
-                        </div>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 1.2rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1rem;">
-                        <div style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px;">
-                            <div style="color: #8E8A82; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em;">Academic Level</div>
-                            <div style="color: #ECE6DD; font-weight: 600; font-size: 0.95rem; margin-top: 2px;">Class {st.session_state.class_level} (CBSE/NCERT)</div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px;">
-                            <div style="color: #8E8A82; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em;">Member Since</div>
-                            <div style="color: #ECE6DD; font-weight: 600; font-size: 0.95rem; margin-top: 2px;">{member_since}</div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px;">
-                            <div style="color: #8E8A82; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em;">Total Study Sessions</div>
-                            <div style="color: #ECE6DD; font-weight: 600; font-size: 0.95rem; margin-top: 2px;">{total_chats} saved chats</div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px;">
-                            <div style="color: #8E8A82; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em;">Account Plan</div>
-                            <div style="color: #ECE6DD; font-weight: 600; font-size: 0.95rem; margin-top: 2px;">Free Student Tier</div>
-                        </div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            # Edit profile options inside a clear expander
-            with st.expander("✏️ Update Profile Information (Name & Class)", expanded=False):
-                with st.form("modal_edit_profile_form"):
-                    new_name_val = st.text_input("Full Name:", value=st.session_state.user_name)
-                    new_class_val = st.selectbox(
-                        "Academic Class Level:",
-                        options=list(range(1, 13)),
-                        index=st.session_state.class_level - 1,
-                        format_func=lambda x: f"Class {x}",
-                    )
-                    save_prof_btn = st.form_submit_button("Save Profile", type="primary", use_container_width=True)
-                    if save_prof_btn:
-                        if new_name_val.strip():
-                            ok_u, msg_u = update_user_profile(uid, new_name_val.strip(), new_class_val)
-                            if ok_u:
-                                st.session_state.user_name = new_name_val.strip()
-                                st.session_state.class_level = new_class_val
-                                st.success("✅ Profile updated!")
-                                st.rerun()
-                            else:
-                                st.error(msg_u)
-
-            # Optional password update tucked away inside an expander so it is NEVER shown upfront
-            with st.expander("🔒 Change Password (Optional)", expanded=False):
-                with st.form("modal_pwd_form"):
-                    curr_p = st.text_input("Current Password:", type="password")
-                    new_p = st.text_input("New Password:", type="password")
-                    conf_p = st.text_input("Confirm New Password:", type="password")
-                    chg_btn = st.form_submit_button("Update Password", use_container_width=True)
-                    if chg_btn:
-                        if len(new_p) < 6:
-                            st.error("Password must be at least 6 characters.")
-                        elif new_p != conf_p:
-                            st.error("New passwords do not match.")
-                        else:
-                            ok_w, msg_w = change_user_password(uid, curr_p, new_p)
-                            if ok_w:
-                                st.success("✅ Password updated successfully!")
-                            else:
-                                st.error(f"❌ {msg_w}")
-
-        elif cur_tab == "Time and focus":
-            st.markdown("<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Time and Focus</h3>", unsafe_allow_html=True)
-            elapsed_mins = int((time.time() - st.session_state.session_start_time) / 60)
-            st.markdown(f"<div style='background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.8rem 1rem; margin-bottom: 1.2rem;'>⏱️ Current Study Session Duration: <b>{elapsed_mins} minutes</b></div>", unsafe_allow_html=True)
-            
-            f_val = st.toggle("Focus Mode (Distraction-Free Minimalist UI)", value=st.session_state.focus_mode, key="modal_focus_tog")
-            if f_val != st.session_state.focus_mode:
-                st.session_state.focus_mode = f_val
-                st.rerun()
-
-            n_val = st.toggle("Notifications when math problems are solved", value=st.session_state.notify_solved, key="modal_notif_tog")
-            if n_val != st.session_state.notify_solved:
-                st.session_state.notify_solved = n_val
-                st.rerun()
-
-        elif cur_tab == "Billing":
-            st.markdown("<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Billing & Plans</h3>", unsafe_allow_html=True)
-            st.markdown(
-                """
-                <div style="background: rgba(217, 119, 87, 0.08); border: 1px solid rgba(217, 119, 87, 0.35); border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-weight: 700; color: #ECE6DD; font-size: 1.1rem;">Free Plan</div>
-                            <div style="color: #9C978D; font-size: 0.85rem; margin-top: 4px;">Unlimited basic step-by-step problem solving & conceptual explanations.</div>
-                        </div>
-                        <span style="background: #2E2C28; border: 1px solid rgba(255,255,255,0.12); color: #ECE6DD; font-size: 0.8rem; padding: 4px 10px; border-radius: 9999px; font-weight: 600;">Active</span>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            st.caption("Need priority quota, advanced voice mode, or custom curriculum worksheets? Upgrade to **AI Tutor Pro**.")
-
-        elif cur_tab == "Capabilities":
-            st.markdown("<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Model Capabilities</h3>", unsafe_allow_html=True)
-            st.markdown(
-                """
-                - 🚀 **AI Tutor 2.5 Flash Model**: High-speed, accurate multi-step mathematical derivation.
-                - 📐 **KaTeX Mathematical Rendering**: Full LaTeX display for complex equations, integrals, matrices, fractions.
-                - 📄 **Multimodal File Scanner**: Direct OCR and analysis for homework photos, textbook PDFs, practice worksheets, and Python scripts.
-                - 💾 **SQLite Local History**: Salted bcrypt security with permanent session persistence.
-                """
-            )
-
+    if solve_pressed:
+        if not q_input.strip() and not pil_image:
+            st.warning("Please type a question or upload an image.")
         else:
-            st.markdown(f"<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>{cur_tab}</h3>", unsafe_allow_html=True)
-            st.markdown(f"<p style='color: #9C978D;'>Configurations and integrations for <b>{cur_tab}</b> are active and connected to your AI Tutor workspace.</p>", unsafe_allow_html=True)
+            with st.spinner("🧠 Analyzing problem, verifying theorems, and generating step-by-step breakdown..."):
+                success, data, msg = solver.solve_question(
+                    question_text=q_input,
+                    image_file=pil_image,
+                    preferred_category=preferred_cat
+                )
+
+                if success:
+                    st.session_state["current_solution"] = data
+                    st.session_state["current_question_text"] = q_input
+                    # Save to database
+                    qid = database.save_solved_question(
+                        user_id=user["id"],
+                        category=data.get("category", "Mathematics"),
+                        topic=data.get("topic", "General"),
+                        question_text=q_input if q_input.strip() else "[Image Problem]",
+                        solution_markdown=json.dumps(data),
+                        practice_problems=data.get("practice_problems", [])
+                    )
+                    st.session_state["saved_question_id"] = qid
+                    st.success("✅ Solution formulated and stored in your Learning Archive!")
+                else:
+                    st.error(f"❌ Error: {msg}")
+
+    # Display Current Solution
+    solution_data = st.session_state.get("current_solution")
+    if solution_data:
+        st.markdown("---")
+        render_solution_card(solution_data, user["id"])
 
 
-# Auto-open settings dialog when triggered
-if st.session_state.get("open_settings", False):
-    st.session_state.open_settings = False
-    render_settings_dialog()
+def render_solution_card(sol: dict, user_id: int):
+    """Renders a fully detailed, structured solution card."""
+    category = sol.get("category", "Mathematics")
+    topic = sol.get("topic", "General")
+    difficulty = sol.get("difficulty", "Standard")
+    cat_icon = "📐" if category == "Mathematics" else "🧠"
 
+    # Meta header
+    st.markdown(f"""
+    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+        <span style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; padding: 4px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">
+            {cat_icon} {category}
+        </span>
+        <span style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; padding: 4px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">
+            🏷️ Topic: {topic}
+        </span>
+        <span style="background: rgba(245, 158, 11, 0.15); color: #fcd34d; padding: 4px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">
+            ⚡ Level: {difficulty}
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
-# SIDEBAR NAVIGATION & CLAUDE LEFT PANEL
-# ─────────────────────────────────────────────
-
-
-with st.sidebar:
-    # 1. Header with Claude Branding (Matching Reference Screenshot)
-    st.markdown(
-        """
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.2rem 0 0.8rem 0;">
-            <div style="display: flex; align-items: center; gap: 9px;">
-                <span style="font-size: 1.35rem; color: #ECE6DD; cursor: pointer;" title="Toggle sidebar">◨</span>
-                <span style="font-family: 'Newsreader', Georgia, serif; font-size: 1.65rem; font-weight: 500; color: #ECE6DD; letter-spacing: -0.02em;">Claude</span>
-            </div>
+    # Core Concept Box
+    core_concept = sol.get("core_concept")
+    if core_concept:
+        st.markdown(f"""
+        <div class="concept-card">
+            <b style="color: #818cf8;">🎯 Core Concept / Governing Principle:</b><br>
+            <span style="color: #cbd5e1;">{core_concept}</span>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """, unsafe_allow_html=True)
 
-    uid = st.session_state.get("user_id", 1)
+    # Key formulas if any
+    formulas = sol.get("key_formulas", [])
+    if formulas:
+        st.markdown("**Key Mathematical Laws / Formulas Applied:**")
+        for f in formulas:
+            st.latex(f)
 
-    # 2. + New Button (Matching Claude rounded pill button)
-    if st.button("+ New", use_container_width=True, key="new_chat_btn"):
-        new_sid = f"chat_{uid}_{int(time.time())}"
-        create_db_chat(uid, new_sid, "New Chat")
-        st.session_state.chat_sessions[new_sid] = {
-            "title": "New Chat",
-            "messages": [],
-            "gemini_history": [],
-            "loaded": True,
-        }
-        st.session_state.active_session_id = new_sid
-        st.session_state.messages = []
-        st.session_state.gemini_history = []
-        st.session_state.show_summary = False
-        st.session_state.summary_text = ""
-        st.session_state.active_nav = "💬 Chat"
-        st.rerun()
+    # Step-by-Step Breakdown
+    st.markdown("### 🪜 Step-by-Step Rigorous Explanation")
+    steps = sol.get("step_by_step_solution", [])
+    for idx, s in enumerate(steps, 1):
+        step_title = s.get("step_title", f"Step {idx}")
+        explanation = s.get("explanation", "")
+        math_expr = s.get("math_expression", "")
 
-    # 3. Primary Navigation Items (Matching Claude Sidebar)
-    if st.button("⚏ Projects", key="side_nav_projects", use_container_width=True):
-        st.session_state.active_nav = "📁 Projects"
-        st.rerun()
-
-    if st.button("ஃ Artifacts", key="side_nav_artifacts", use_container_width=True):
-        st.session_state.active_nav = "📄 Artifacts"
-        st.rerun()
-
-    col_nav_code, col_nav_upg = st.columns([3.8, 1.4])
-    with col_nav_code:
-        if st.button("</> Code", key="side_nav_code", use_container_width=True):
-            st.session_state.active_nav = "💻 Code"
-            st.rerun()
-    with col_nav_upg:
-        st.markdown(
-            "<div style='padding-top: 7px;'><span style='background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #8E8B85; font-size: 0.72rem; padding: 2px 7px; border-radius: 9999px; font-weight: 600;'>Upgrade</span></div>",
-            unsafe_allow_html=True,
-        )
-
-    if st.button("⊡ Customize", key="side_nav_customize", use_container_width=True):
-        st.session_state.active_nav = "ℹ️ About"
-        st.rerun()
-
-    # 4. Chats and Tasks Section
-    st.markdown(
-        """
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.2rem; margin-bottom: 0.45rem; padding: 0 4px;">
-            <span style="font-size: 0.76rem; font-weight: 600; color: #787570; text-transform: uppercase; letter-spacing: 0.05em;">Chats and tasks</span>
-            <span style="font-size: 0.85rem; color: #787570; cursor: pointer;" title="Filter">⫶⫶</span>
+        st.markdown(f"""
+        <div class="step-card">
+            <b style="color: #818cf8; font-size: 1rem;">Step {idx}: {step_title}</b>
+            <div style="color: #e2e8f0; margin-top: 6px; line-height: 1.6;">{explanation}</div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """, unsafe_allow_html=True)
 
-    for sid, sdata in list(st.session_state.chat_sessions.items()):
-        is_active = (sid == st.session_state.active_session_id)
-        display_title = sdata.get("title", "Chat")
-        col_c, col_d = st.columns([5, 1])
-        with col_c:
-            btn_text = f"◦ **{display_title}**" if is_active else f"◦ {display_title}"
-            if st.button(btn_text, key=f"sbtn_{sid}", use_container_width=True):
-                if not sdata.get("loaded", False):
-                    msgs = get_db_messages(sid, uid)
-                    sdata["messages"] = msgs
-                    sdata["gemini_history"] = [
-                        {"role": "model" if m["role"] == "assistant" else "user", "parts": [m["content"]]}
-                        for m in msgs
-                    ]
-                    sdata["loaded"] = True
-                st.session_state.active_session_id = sid
-                st.session_state.messages = sdata["messages"]
-                st.session_state.gemini_history = sdata["gemini_history"]
-                st.session_state.active_nav = "💬 Chat"
-                st.rerun()
-        with col_d:
-            if len(st.session_state.chat_sessions) > 1:
-                if st.button("✕", key=f"del_{sid}", help="Delete chat"):
-                    delete_db_chat(sid, uid)
-                    del st.session_state.chat_sessions[sid]
-                    if sid == st.session_state.active_session_id:
-                        rem_id = list(st.session_state.chat_sessions.keys())[0]
-                        st.session_state.active_session_id = rem_id
-                        if not st.session_state.chat_sessions[rem_id].get("loaded", False):
-                            msgs = get_db_messages(rem_id, uid)
-                            st.session_state.chat_sessions[rem_id]["messages"] = msgs
-                            st.session_state.chat_sessions[rem_id]["gemini_history"] = [
-                                {"role": "model" if m["role"] == "assistant" else "user", "parts": [m["content"]]}
-                                for m in msgs
-                            ]
-                            st.session_state.chat_sessions[rem_id]["loaded"] = True
-                        st.session_state.messages = st.session_state.chat_sessions[rem_id]["messages"]
-                        st.session_state.gemini_history = st.session_state.chat_sessions[rem_id]["gemini_history"]
-                    st.rerun()
+        if math_expr and math_expr.strip():
+            # If standard latex format
+            if "$$" in math_expr:
+                st.markdown(math_expr)
+            else:
+                st.latex(math_expr)
 
-    # 5. User Account Profile Popover (Bottom of Sidebar matching screenshot)
-    initial = st.session_state.user_name[:1].upper() if st.session_state.user_name else "N"
-    with st.popover(f"{initial}  {first_name} · Free  ∨    ⊞", use_container_width=True):
-        st.markdown(
-            f"<div style='font-size: 0.82rem; color: #8E8B85; padding-bottom: 0.5rem; margin-bottom: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.08);'>{st.session_state.user_email}</div>",
-            unsafe_allow_html=True,
-        )
-
-        if st.button("👤 Profile & Account", key="pop_btn_account", use_container_width=True):
-            st.session_state.settings_tab = "Account"
-            st.session_state.open_settings = True
-            st.rerun()
-
-        col_set_b, col_set_k = st.columns([3.5, 1.5])
-        with col_set_b:
-            if st.button("⚙️ Settings", key="pop_btn_open_settings", use_container_width=True):
-                st.session_state.open_settings = True
-                st.rerun()
-        with col_set_k:
-            st.markdown("<div style='padding-top: 7px; text-align: right; color: #787570; font-size: 0.74rem;'>Ctrl+Shift+,</div>", unsafe_allow_html=True)
-
-        st.markdown(
-            """
-            <div style="padding: 0.3rem 0; font-size: 0.88rem; line-height: 2.2; color: #ECE6DD;">
-                <div>🌐 <b>Language:</b> English</div>
-                <div>❓ <b>Get help</b></div>
-                <div>⬆️ <b>Upgrade plan</b></div>
-                <div>📱 <b>Get apps and extensions</b></div>
-                <div>ℹ️ <b>Learn more &gt;</b></div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.divider()
-
-        if st.button("🚪 Log out", key="pop_logout_btn", use_container_width=True):
-            st.session_state.is_logged_in = False
-            st.session_state.user_name = ""
-            st.session_state.user_email = ""
-            st.session_state.user_id = None
-            st.session_state.messages = []
-            st.session_state.gemini_history = []
-            st.session_state.chat_sessions = {}
-            st.rerun()
-
-
-
-# ─────────────────────────────────────────────
-# MAIN TOP BAR (Free plan · Upgrade & Ghost Avatar)
-# ─────────────────────────────────────────────
-
-st.markdown(
-    """
-    <div class="claude-top-bar">
-        <div></div>
-        <div class="claude-top-right">
-            <span class="claude-plan-text">Free plan · <a href="#upgrade" class="claude-upgrade-link">Upgrade</a></span>
-            <div class="claude-ghost-avatar">👻</div>
+    # Final Answer Card
+    final_ans = sol.get("final_answer", "")
+    st.markdown(f"""
+    <div class="final-answer-card">
+        <div style="color: #34d399; font-weight: 700; font-size: 1.1rem; margin-bottom: 4px;">
+            ✅ Final Answer:
+        </div>
+        <div style="font-size: 1.25rem; font-weight: 700; color: #ffffff;">
+            {final_ans}
         </div>
     </div>
-    """,
-    unsafe_allow_html=True,
-)
+    """, unsafe_allow_html=True)
 
-# Focus Mode Banner
-if st.session_state.focus_mode:
-    elapsed_mins = int((time.time() - st.session_state.session_start_time) / 60)
-    st.markdown(
-        f"""
-        <div class="focus-banner">
-            <span>⏱️ <b>Focus Mode Active</b> • {st.session_state.user_name} is in deep study flow</span>
-            <span>Study Time: <b>{elapsed_mins}m</b></span>
+    # Pro Tip Card
+    pro_tip = sol.get("pro_tip")
+    if pro_tip:
+        st.markdown(f"""
+        <div class="tip-card">
+            <b style="color: #fbbf24;">💡 Student Pro Tip / Speed Shortcut:</b><br>
+            <span style="color: #e2e8f0;">{pro_tip}</span>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """, unsafe_allow_html=True)
 
-# SDK Availability Check
-if not GENAI_AVAILABLE:
-    st.warning(
-        "⚠️ **Google GenAI SDK Setup Notice (Streamlit Cloud)**\n\n"
-        f"*{GENAI_ERROR}*\n\n"
-        "**To resolve this:**\n"
-        "1. Click **Manage app** (bottom-right corner) → **⋮ (three dots)** → **Reboot app**.\n"
-        "2. (If prompted in App Settings) set Python version to **3.11**."
-    )
-
-# API Key Error Check
-if key_error:
-    st.error(f"🔑 **API Key Missing:** {key_error}")
-    st.info("Add `GEMINI_API_KEY` to your `.env` file locally or in Cloud Secrets.")
-    st.stop()
-
-
-# ─────────────────────────────────────────────
-# VIEW 1: 💬 CHAT (Main Conversational Tutor with Streaming)
-# ─────────────────────────────────────────────
-
-if st.session_state.active_nav == "💬 Chat":
-
-    # Welcome Screen / Center Hero Greeting (Matching Claude Reference Screenshot)
-    if not st.session_state.messages:
-        first_name = st.session_state.user_name.split()[0] if st.session_state.user_name else "there"
-        st.markdown(
-            f"""
-            <div class="claude-hero-container">
-                <div class="claude-hero-title">
-                    {get_starburst_logo(size=36)}
-                    <span>Let's noodle, {first_name}</span>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        # Interactive Claude Command Board (Real Center Textarea + Toolbar)
-        st.markdown('<div class="claude-composer-shell">', unsafe_allow_html=True)
-        with st.form("claude_hero_command_form", clear_on_submit=True):
-            hero_prompt = st.text_area(
-                "Prompt Input",
-                placeholder="How can I help you today?",
-                key="hero_command_input",
-                label_visibility="collapsed",
-                height=110,
-            )
-
-            with st.expander("➕ Add attachment (photo / PDF / code)", expanded=False):
-                hero_file = st.file_uploader(
-                    "Attach File",
-                    type=["png", "jpg", "jpeg", "webp", "pdf", "txt", "md", "csv", "py"],
-                    key="hero_command_file",
-                    label_visibility="collapsed",
-                )
-
-            col_tb_l, col_tb_m, col_tb_r = st.columns([1.6, 2, 0.7])
-            with col_tb_l:
-                st.markdown(
-                    """
-                    <div style="display: flex; align-items: center; gap: 8px; padding-top: 6px;">
-                        <span class="claude-pill-active">Chat</span>
-                        <span class="claude-pill-subtle">Cowork</span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            with col_tb_m:
-                st.markdown(
-                    """
-                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; color: #8E8B85; font-size: 0.88rem; padding-top: 7px;">
-                        <span class="claude-model-badge">Sonnet 3.5 &nbsp;Medium ▾</span>
-                        <span style="font-size: 1rem; cursor: pointer;" title="Voice mode enabled">🎙️</span>
-                        <span style="font-size: 1rem; cursor: pointer;" title="Audio waveform">〰️</span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            with col_tb_r:
-                hero_submit = st.form_submit_button("↑", type="primary", use_container_width=True)
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        # Handle Command Board submission
-        if hero_submit:
-            has_text = bool(hero_prompt and hero_prompt.strip())
-            has_file = hero_file is not None
-
-            if has_text or has_file:
-                user_text = hero_prompt.strip() if has_text else ""
-                file_meta = None
-                img_payload = None
-                full_query = user_text
-
-                if has_file:
-                    file_bytes = hero_file.read()
-                    file_name = hero_file.name
-                    mime_type = hero_file.type or ""
-                    ext = file_name.lower().split(".")[-1] if "." in file_name else ""
-
-                    with st.spinner(f"Reading and scanning {file_name}... 📄"):
-                        extracted_text = extract_content_from_file(
-                            api_key=api_key,
-                            file_bytes=file_bytes,
-                            file_name=file_name,
-                            mime_type=mime_type,
-                        )
-
-                    is_image = ext in ["png", "jpg", "jpeg", "webp", "bmp"]
-                    img_payload = file_bytes if is_image else None
-                    file_meta = {"name": file_name, "type": ext.upper() or "Document"}
-
-                    if user_text:
-                        full_query = (
-                            f"{user_text}\n\n"
-                            f"**Extracted Content from '{file_name}':**\n{extracted_text}\n\n"
-                            f"Please provide the detailed step-by-step solution first, "
-                            f"and then create a similar practice problem for me!"
-                        )
-                    else:
-                        full_query = (
-                            f"I attached a file: **{file_name}**\n\n"
-                            f"**Extracted Math Problem(s):**\n{extracted_text}\n\n"
-                            f"Please provide the detailed step-by-step solution first, "
-                            f"and then create a similar practice problem for me!"
-                        )
-
-                send_to_tutor(full_query, image=img_payload, file_meta=file_meta)
-                st.rerun()
-            else:
-                st.toast("Please type a question or math problem to solve!")
-
-        # Quick Action Pill Chips (5 Buttons Underneath Prompt Box matching Claude reference)
-        st.markdown('<div class="claude-action-pills">', unsafe_allow_html=True)
-        col_p1, col_p2, col_p3, col_p4, col_p5 = st.columns(5)
-        with col_p1:
-            if st.button("✏️ Write", use_container_width=True, key="hero_write"):
-                send_to_tutor(f"Help me write a clear, step-by-step solution and mathematical explanation suited for Class {st.session_state.class_level}.")
-                st.rerun()
-        with col_p2:
-            if st.button("🎓 Learn", use_container_width=True, key="hero_learn"):
-                send_to_tutor(f"Teach me a core math concept from Class {st.session_state.class_level} using simple intuition and real-world examples.")
-                st.rerun()
-        with col_p3:
-            if st.button("</> Code", use_container_width=True, key="hero_code"):
-                send_to_tutor("Write a clean Python script to visualize and solve a math algorithm with step-by-step comments.")
-                st.rerun()
-        with col_p4:
-            if st.button("☕ Life stuff", use_container_width=True, key="hero_life"):
-                send_to_tutor("Give me engaging real-world scenarios, practical applications and decision problems connecting math to life.")
-                st.rerun()
-        with col_p5:
-            if st.button("💡 Claude's choice", use_container_width=True, key="hero_choice"):
-                send_to_tutor("Surprise me with a fascinating, counterintuitive mathematical puzzle or real-world concept!")
-                st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-
-    # Render Chat History
-    for msg in st.session_state.messages:
-        author_display = msg.get("author", st.session_state.user_name if msg["role"] == "user" else "AI Tutor")
-        with st.chat_message(
-            name=msg["role"],
-            avatar="🧑‍🎓" if msg["role"] == "user" else "📐",
-        ):
-            st.caption(f"**{author_display}**")
-            if msg.get("file_meta"):
-                f_meta = msg["file_meta"]
-                st.markdown(
-                    f'<div class="file-chip">📎 Attached File: <b>{f_meta["name"]}</b> ({f_meta["type"]})</div>',
-                    unsafe_allow_html=True,
-                )
-            if msg.get("image"):
-                st.image(msg["image"], caption="📷 Attached Problem Image", width=340)
-
-            st.markdown(msg["content"])
-
-    # Parent Summary Display
-    if st.session_state.show_summary and st.session_state.summary_text:
+    # Practice Problems Section
+    practice_problems = sol.get("practice_problems", [])
+    if practice_problems:
         st.markdown("---")
-        st.markdown("### 📋 Parent Session Summary")
-        st.markdown(
-            f'<div class="artifact-box" style="border-color: #10b981;">{st.session_state.summary_text}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown("""
+        <div>
+            <span class="hero-badge">🎯 Reinforce Your Learning</span>
+            <h3 style="margin-top: 4px;">Similar Practice Problems</h3>
+            <p style="color: #94a3b8; font-size: 0.9rem;">Test your understanding immediately on these similar questions carefully crafted to test this exact concept.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    # Floating Prompt Bar with Multi-File Upload & Real-time Streaming (Shown during active conversation)
-    chat_val = None
-    if st.session_state.messages:
-        chat_val = st.chat_input(
-            placeholder="Reply to AI Tutor or ask a follow-up question...",
-            accept_file=True,
-            file_type=["png", "jpg", "jpeg", "webp", "pdf", "txt", "md", "csv", "py"],
-        )
-
-    if chat_val:
-        user_text = ""
-        uploaded_files = []
-
-        if hasattr(chat_val, "text"):
-            user_text = chat_val.text.strip()
-        elif isinstance(chat_val, str):
-            user_text = chat_val.strip()
-
-        if hasattr(chat_val, "files") and chat_val.files:
-            uploaded_files = chat_val.files
-
-        file_meta = None
-        img_payload = None
-        full_query = user_text
-
-        if uploaded_files:
-            attached_file = uploaded_files[0]
-            file_bytes = attached_file.read()
-            file_name = attached_file.name
-            mime_type = attached_file.type or ""
-            ext = file_name.lower().split(".")[-1] if "." in file_name else ""
-
-            with st.spinner(f"Reading and scanning {file_name}... 📄"):
-                extracted_text = extract_content_from_file(
-                    api_key=api_key,
-                    file_bytes=file_bytes,
-                    file_name=file_name,
-                    mime_type=mime_type,
-                )
-
-            is_image = ext in ["png", "jpg", "jpeg", "webp", "bmp"]
-            img_payload = file_bytes if is_image else None
-            file_meta = {"name": file_name, "type": ext.upper() or "Document"}
-
-            if user_text:
-                full_query = (
-                    f"{user_text}\n\n"
-                    f"**Extracted Content from '{file_name}':**\n{extracted_text}\n\n"
-                    f"Please provide the detailed step-by-step solution first, "
-                    f"and then create a similar practice problem for me!"
-                )
-            else:
-                full_query = (
-                    f"I attached a file: **{file_name}**\n\n"
-                    f"**Extracted Math Problem(s):**\n{extracted_text}\n\n"
-                    f"Please provide the detailed step-by-step solution first, "
-                    f"and then create a similar practice problem for me!"
-                )
-
-        if full_query:
-            # 1. Display User Message Immediately
-            with st.chat_message("user", avatar="🧑‍🎓"):
-                st.caption(f"**{st.session_state.user_name}**")
-                if file_meta:
-                    st.markdown(
-                        f'<div class="file-chip">📎 Attached File: <b>{file_meta["name"]}</b> ({file_meta["type"]})</div>',
-                        unsafe_allow_html=True,
-                    )
-                if img_payload:
-                    st.image(img_payload, caption="📷 Attached Problem Image", width=340)
-                st.markdown(user_text if user_text else f"Attached: {file_meta['name']}")
-
-            add_message("user", full_query, image=img_payload, file_meta=file_meta)
-
-            # 2. Stream Assistant Response in Real-Time
-            with st.chat_message("assistant", avatar="📐"):
-                st.caption("**AI Tutor**")
-                system_prompt = get_system_prompt(st.session_state.class_level)
-                stream_gen = get_gemini_stream(
-                    api_key=api_key,
-                    system_prompt=system_prompt,
-                    chat_history=st.session_state.gemini_history[:-1],
-                    user_message=full_query,
-                )
-                full_reply = st.write_stream(stream_gen)
-
-            add_message("assistant", full_reply)
-
-            # Auto-title chat session
-            sid = st.session_state.active_session_id
-            if sid in st.session_state.chat_sessions:
-                if st.session_state.chat_sessions[sid]["title"].startswith("Chat "):
-                    display_title = user_text if user_text else (file_meta["name"] if file_meta else "Math Problem")
-                    st.session_state.chat_sessions[sid]["title"] = display_title[:24] + ("..." if len(display_title) > 24 else "")
-
-            if st.session_state.notify_solved:
-                st.toast("🎯 Solution & practice problem prepared!", icon="⭐")
-
-            st.rerun()
-
-
-# ─────────────────────────────────────────────
-# VIEW: 📜 CHAT HISTORY (Persistent SQLite Archive)
-# ─────────────────────────────────────────────
-
-elif st.session_state.active_nav == "📜 Chat History":
-    uid = st.session_state.get("user_id")
-    all_chats = get_user_chats(uid) if uid else []
-
-    st.markdown("### 📜 Chat History & Past Tutoring Sessions")
-    st.caption("Review, search, and resume your past math problems, step-by-step solutions, and practice sets.")
-
-    top_c1, top_c2 = st.columns([3, 1])
-    with top_c1:
-        search_query = st.text_input("🔍 Search past topics & questions:", placeholder="e.g. Fractions, Trigonometry, Linear equations...", label_visibility="collapsed")
-    with top_c2:
-        if st.button("➕ Start New Chat", type="primary", use_container_width=True, key="hist_start_new_btn"):
-            new_cid = f"chat_{uid}_{int(time.time())}"
-            create_db_chat(uid, new_cid, "New Chat")
-            st.session_state.chat_sessions[new_cid] = {
-                "title": "New Chat",
-                "created_at": "Just now",
-                "updated_at": "Just now",
-                "messages": [],
-                "gemini_history": [],
-                "loaded": True,
-            }
-            st.session_state.active_session_id = new_cid
-            st.session_state.messages = []
-            st.session_state.gemini_history = []
-            st.session_state.active_nav = "💬 Chat"
-            st.rerun()
-
-    filtered_chats = [c for c in all_chats if not search_query.strip() or search_query.strip().lower() in c["title"].lower()]
-
-    if not filtered_chats:
-        st.info("No saved chat sessions found. Start a new chat to begin practicing!")
-    else:
-        for c in filtered_chats:
-            cid = c["id"]
-            ctitle = c["title"]
-            c_msgs = get_db_messages(cid, uid)
-            msg_count = len(c_msgs)
-            last_active = c.get("updated_at", c.get("created_at", "Recently"))
-
+        for p_idx, prob in enumerate(practice_problems, 1):
             with st.container():
-                st.markdown(
-                    f"""
-                    <div class="artifact-box" style="margin-bottom: 0.6rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                            <div>
-                                <div class="artifact-box-title" style="font-size: 1.05rem;">💬 {ctitle}</div>
-                                <div class="artifact-box-desc" style="margin-top: 0.3rem;">
-                                    <span>⏱️ <b>{last_active}</b></span> &nbsp;•&nbsp; 
-                                    <span>💬 <b>{msg_count}</b> messages</span>
-                                </div>
-                            </div>
-                        </div>
+                st.markdown(f"""
+                <div class="practice-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <b style="color: #a5b4fc; font-size: 1rem;">Exercise #{p_idx}: {prob.get('level', 'Practice')}</b>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                col_res, col_del = st.columns([4, 1])
-                with col_res:
-                    if st.button(f"Resume Chat: {ctitle[:30]} →", key=f"hist_resume_{cid}", use_container_width=True):
-                        st.session_state.active_session_id = cid
-                        st.session_state.messages = c_msgs
-                        st.session_state.gemini_history = [
-                            {"role": "model" if m["role"] == "assistant" else "user", "parts": [m["content"]]}
-                            for m in c_msgs
-                        ]
-                        if cid in st.session_state.chat_sessions:
-                            st.session_state.chat_sessions[cid]["messages"] = st.session_state.messages
-                            st.session_state.chat_sessions[cid]["gemini_history"] = st.session_state.gemini_history
-                            st.session_state.chat_sessions[cid]["loaded"] = True
-                        st.session_state.active_nav = "💬 Chat"
-                        st.rerun()
-                with col_del:
-                    if st.button("🗑️ Delete", key=f"hist_del_{cid}", use_container_width=True):
-                        delete_db_chat(cid, uid)
-                        if cid in st.session_state.chat_sessions:
-                            del st.session_state.chat_sessions[cid]
-                        if cid == st.session_state.active_session_id:
-                            load_user_sessions(uid)
-                        st.toast("Chat deleted permanently.")
-                        st.rerun()
-
-
-# ─────────────────────────────────────────────
-# VIEW: 👤 ACCOUNT DETAILS (Profile, Grade & Security)
-# ─────────────────────────────────────────────
-
-elif st.session_state.active_nav == "👤 Account Details":
-    uid = st.session_state.get("user_id")
-    user_info = get_user_details(uid) if uid else None
-
-    st.markdown("### 👤 Account Details & Preferences")
-    st.caption("Manage your student profile, academic grade level, security password, and tutor preferences.")
-
-    col_l, col_r = st.columns([1.1, 1.4])
-
-    with col_l:
-        # Profile Summary Card
-        initials = (st.session_state.user_name[:2].upper() if st.session_state.user_name else "NS")
-        member_since = user_info.get("created_at", "October 2026") if user_info else "October 2026"
-        total_chats = user_info.get("total_chats", len(st.session_state.chat_sessions)) if user_info else 0
-        total_questions = user_info.get("total_questions", 0) if user_info else 0
-
-        st.markdown(
-            f"""
-            <div class="profile-card" style="text-align: center; padding: 2rem 1.2rem;">
-                <div style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #da7756, #c86544); display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; font-size: 1.8rem; margin: 0 auto 1rem auto; box-shadow: 0 8px 24px rgba(218, 119, 86, 0.3);">
-                    {initials}
-                </div>
-                <h3 style="color: #fbfbfa; margin: 0 0 0.2rem 0; font-size: 1.4rem;">{st.session_state.user_name}</h3>
-                <div style="color: #9c9ca4; font-size: 0.9rem; margin-bottom: 0.8rem;">{st.session_state.user_email}</div>
-                <div style="display: inline-block; background: rgba(218, 119, 86, 0.15); border: 1px solid rgba(218, 119, 86, 0.4); border-radius: 20px; padding: 0.3rem 0.9rem; font-size: 0.82rem; font-weight: 600; color: #e5987d; margin-bottom: 1.5rem;">
-                    🎓 Student Scholar • Class {st.session_state.class_level}
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; text-align: left; margin-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 1.2rem;">
-                    <div style="background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 0.7rem;">
-                        <div style="color: #8c8c96; font-size: 0.78rem;">Total Chats</div>
-                        <div style="color: #fbfbfa; font-size: 1.2rem; font-weight: 700;">{total_chats}</div>
-                    </div>
-                    <div style="background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 0.7rem;">
-                        <div style="color: #8c8c96; font-size: 0.78rem;">Questions Asked</div>
-                        <div style="color: #fbfbfa; font-size: 1.2rem; font-weight: 700;">{total_questions}</div>
+                    <div style="color: #f1f5f9; font-size: 1.05rem; margin: 10px 0; font-weight: 500;">
+                        {prob.get('question', '')}
                     </div>
                 </div>
-                <div style="color: #8c8c96; font-size: 0.8rem; margin-top: 1rem;">
-                    Member Since: <b>{member_since}</b>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                """, unsafe_allow_html=True)
 
-    with col_r:
-        # Profile Details & Information Overview
-        st.markdown(
-            f"""
-            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.2rem; margin-bottom: 1.2rem;">
-                <h4 style="color: #ECE6DD; margin: 0 0 0.8rem 0; font-size: 1.1rem;">📋 Student Profile Information</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem;">
-                    <div><span style="color: #8E8B85;">Full Name:</span> <b style="color: #ECE6DD;">{st.session_state.user_name}</b></div>
-                    <div><span style="color: #8E8B85;">Email:</span> <b style="color: #ECE6DD;">{st.session_state.user_email}</b></div>
-                    <div><span style="color: #8E8B85;">Grade Level:</span> <b style="color: #DA7756;">Class {st.session_state.class_level} (CBSE/NCERT)</b></div>
-                    <div><span style="color: #8E8B85;">Account Tier:</span> <b style="color: #34d399;">Free Scholar Plan</b></div>
-                    <div><span style="color: #8E8B85;">Member Since:</span> <b style="color: #ECE6DD;">{member_since}</b></div>
-                    <div><span style="color: #8E8B85;">Account Status:</span> <b style="color: #34d399;">Active • Verified</b></div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                # Student Interactive Attempt
+                col_ans, col_btn = st.columns([3, 1])
+                user_ans_key = f"attempt_ans_{p_idx}_{prob.get('id', p_idx)}"
+                with col_ans:
+                    student_guess = st.text_input("Your Answer:", placeholder="Enter your calculated answer...", key=user_ans_key)
+                with col_btn:
+                    st.write("") # spacing
+                    verify_clicked = st.button("Check Answer", key=f"btn_check_{p_idx}")
 
-        # Card 1: Edit Profile Details
-        st.markdown("#### ✏️ Edit Profile Details")
-        with st.form("edit_profile_form"):
-            new_name = st.text_input("Full Name:", value=st.session_state.user_name)
-            new_class_choice = st.selectbox(
-                "School Class / Grade Level:",
-                options=list(range(1, 13)),
-                index=st.session_state.class_level - 1,
-                format_func=lambda x: f"Class {x} (CBSE/NCERT)",
-            )
-            save_profile_btn = st.form_submit_button("💾 Save Profile Changes", type="primary", use_container_width=True)
-
-            if save_profile_btn:
-                if not new_name.strip():
-                    st.error("Name cannot be empty.")
-                else:
-                    ok_p, msg_p = update_user_profile(uid, new_name, new_class_choice)
-                    if ok_p:
-                        st.session_state.user_name = new_name.strip()
-                        st.session_state.class_level = new_class_choice
-                        st.success("✅ Profile updated successfully!")
-                        time.sleep(0.3)
-                        st.rerun()
+                if verify_clicked:
+                    expected = str(prob.get("correct_answer", "")).strip().lower()
+                    attempt = str(student_guess).strip().lower()
+                    if not attempt:
+                        st.warning("Please type an answer to check.")
                     else:
-                        st.error(f"❌ {msg_p}")
-
-        # Card 2: Security & Password Update (Tucked inside collapsed expander so profile details show first)
-        with st.expander("🔒 Security: Change Password (Optional)", expanded=False):
-            with st.form("change_pwd_form"):
-                current_pwd = st.text_input("Current Password:", type="password", placeholder="••••••••")
-                new_pwd = st.text_input("New Password:", type="password", placeholder="Min 6 characters")
-                confirm_new_pwd = st.text_input("Confirm New Password:", type="password", placeholder="Re-enter new password")
-                save_pwd_btn = st.form_submit_button("🔑 Update Password", use_container_width=True)
-
-                if save_pwd_btn:
-                    if not current_pwd or not new_pwd:
-                        st.error("Please enter both current and new password.")
-                    elif len(new_pwd) < 6:
-                        st.error("New password must be at least 6 characters.")
-                    elif new_pwd != confirm_new_pwd:
-                        st.error("New passwords do not match.")
-                    else:
-                        ok_w, msg_w = change_user_password(uid, current_pwd, new_pwd)
-                        if ok_w:
-                            st.success("✅ Password changed successfully! Plain text was never stored.")
+                        # Simple match check
+                        is_match = (attempt == expected) or (expected in attempt) or (attempt in expected)
+                        database.log_practice_attempt(
+                            user_id=user_id,
+                            question_id=st.session_state.get("saved_question_id"),
+                            problem_text=prob.get("question", ""),
+                            student_answer=student_guess,
+                            correct_answer=prob.get("correct_answer", ""),
+                            is_correct=is_match
+                        )
+                        if is_match:
+                            st.success(f"🎉 Excellent! Correct answer: {prob.get('correct_answer')}")
                         else:
-                            st.error(f"❌ {msg_w}")
+                            st.error(f"❌ Not quite. Expected: {prob.get('correct_answer')}")
 
-        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-
-        # Card 3: Account Sign Out
-        if st.button("🚪 Log Out of AI Tutor", type="secondary", use_container_width=True, key="acc_details_logout"):
-            st.session_state.is_logged_in = False
-            st.session_state.user_name = ""
-            st.session_state.user_email = ""
-            st.session_state.user_id = None
-            st.session_state.messages = []
-            st.session_state.gemini_history = []
-            st.session_state.chat_sessions = {}
-            st.rerun()
+                # Hint and Full solution expanders
+                h_col, s_col = st.columns(2)
+                with h_col:
+                    with st.expander("💡 Need a Hint?"):
+                        st.info(prob.get("hint", "Break down the problem using the step-by-step logic shown above."))
+                with s_col:
+                    with st.expander("📖 View Full Solution"):
+                        st.markdown(prob.get("step_by_step_solution", "Solution not available."))
 
 
-# ─────────────────────────────────────────────
-# VIEW 2: 📁 PROJECTS (Math Workspaces)
-# ─────────────────────────────────────────────
+# 7. View: Practice Arena
+def render_practice_arena_view():
+    user = st.session_state["user"]
+    st.markdown("""
+    <div>
+        <div class="hero-badge">🎯 Interactive Arena</div>
+        <h2 class="main-title" style="font-size: 1.8rem;">Practice & Mastery Arena</h2>
+        <p class="sub-title">Generate unlimited customized practice problems in specific topics to sharpen your problem-solving speed.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-elif st.session_state.active_nav == "📁 Projects":
-    st.markdown("### 📁 Math Projects & Workspaces")
-    st.caption("Organized study workspaces tailored for " + st.session_state.user_name + " (Class " + str(st.session_state.class_level) + ")")
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        arena_domain = st.selectbox("Topic Category", ["Mathematics", "Reasoning"])
+    with col2:
+        if arena_domain == "Mathematics":
+            arena_topic = st.selectbox("Math Topic", ["Algebra & Quadratics", "Calculus & Derivatives", "Integration", "Trigonometry", "Probability & Statistics", "Arithmetic & Percentages", "Coordinate Geometry"])
+        else:
+            arena_topic = st.selectbox("Reasoning Topic", ["Number & Letter Series", "Syllogisms & Venn Logic", "Blood Relations", "Direction Sense", "Coding-Decoding", "Seating Arrangement", "Mathematical Puzzles"])
+    with col3:
+        arena_level = st.selectbox("Difficulty", ["Foundation / Beginner", "Standard / Intermediate", "Advanced / Challenge"])
 
-    p1, p2 = st.columns(2)
-    with p1:
-        st.markdown(
-            """
-            <div class="artifact-box">
-                <div class="artifact-box-title">📘 NCERT Curriculum Mastery</div>
-                <div class="artifact-box-desc">Step-by-step solutions and exercise-by-exercise guided practice.</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if st.button("Open NCERT Workspace", key="open_proj_1", use_container_width=True):
-            send_to_tutor(f"Let's start the NCERT Curriculum Workspace for Class {st.session_state.class_level}. Give me the first key chapter concept and problem.")
-            st.session_state.active_nav = "💬 Chat"
-            st.rerun()
-
-    with p2:
-        st.markdown(
-            """
-            <div class="artifact-box">
-                <div class="artifact-box-title">🏆 Exam & Olympiad Challenge</div>
-                <div class="artifact-box-desc">Higher-order thinking questions (HOTS) and past exam problems.</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if st.button("Open Exam Challenge", key="open_proj_2", use_container_width=True):
-            send_to_tutor(f"Give me a challenging exam/olympiad-level problem for Class {st.session_state.class_level}, solve it with detailed steps, and test me on a similar problem!")
-            st.session_state.active_nav = "💬 Chat"
-            st.rerun()
-
-
-# ─────────────────────────────────────────────
-# VIEW 3: 💻 CODE (Python Math Calculator & Solver)
-# ─────────────────────────────────────────────
-
-elif st.session_state.active_nav == "💻 Code":
-    st.markdown("### 💻 Math Code & Formula Sandbox")
-    st.caption("Verify math formulas and run Python calculations")
-
-    code_input = st.text_area(
-        "Enter math expression or Python code:",
-        value="""# Calculate quadratic roots or evaluate formulas
-import math
-
-a, b, c = 1, -5, 6
-discriminant = b**2 - 4*a*c
-root1 = (-b + math.sqrt(discriminant)) / (2*a)
-root2 = (-b - math.sqrt(discriminant)) / (2*a)
-print(f"Roots of x^2 - 5x + 6 = 0 are: {root1}, {root2}")
-""",
-        height=180,
-    )
-
-    if st.button("▶️ Run & Verify Code", key="run_math_code"):
-        try:
-            import io
-            import sys
-            buffer = io.StringIO()
-            sys_stdout = sys.stdout
-            sys.stdout = buffer
-            exec(code_input, {"math": __import__("math")})
-            sys.stdout = sys_stdout
-            out = buffer.getvalue()
-            st.success("✅ Output:")
-            st.code(out if out else "(Executed successfully with no printed output)")
-        except Exception as e:
-            st.error(f"Execution Error: {e}")
-
-
-# ─────────────────────────────────────────────
-# VIEW 4: 📄 ARTIFACTS (File Creation & Download)
-# ─────────────────────────────────────────────
-
-elif st.session_state.active_nav == "📄 Artifacts":
-    st.markdown("### 📄 Created Files & Artifacts")
-    st.caption("Generate printable practice worksheets, formula cheat sheets, and study sets.")
-
-    with st.expander("✨ Create New Math File (Worksheet / Cheat Sheet)", expanded=True):
-        topic_input = st.text_input("Math Topic:", placeholder="e.g. Linear Equations, Fractions, Trigonometry")
-        art_type = st.selectbox(
-            "File Type:",
-            options=["worksheet", "cheat_sheet", "solution_set"],
-            format_func=lambda x: {
-                "worksheet": "📝 Printable Practice Worksheet (.md)",
-                "cheat_sheet": "⚡ Formula Cheat Sheet (.md)",
-                "solution_set": "📘 Master Solved Set (.md)",
-            }[x],
-        )
-        if st.button("Generate File Now", key="gen_art_page_btn", use_container_width=True):
-            if not topic_input.strip():
-                st.warning("Please enter a topic.")
-            elif key_error:
-                st.error(key_error)
+    if st.button("✨ Generate New Practice Challenge", type="primary", use_container_width=True):
+        prompt_q = f"Generate 1 high-quality practice question for topic '{arena_topic}' at '{arena_level}' level."
+        with st.spinner("Crafting challenge with detailed hints and full solution..."):
+            ok, data, msg = solver.solve_question(prompt_q, preferred_category=arena_domain)
+            if ok:
+                st.session_state["arena_challenge"] = data
             else:
-                with st.spinner("Generating file... 📄"):
-                    fname, fcontent = create_math_artifact(
-                        api_key=api_key,
-                        topic=topic_input.strip(),
-                        class_level=st.session_state.class_level,
-                        artifact_type=art_type,
-                    )
-                st.session_state.artifacts.append({"name": fname, "content": fcontent, "type": art_type})
-                st.success(f"Generated {fname}!")
+                st.error(f"Generation error: {msg}")
+
+    challenge = st.session_state.get("arena_challenge")
+    if challenge:
+        st.markdown("---")
+        render_solution_card(challenge, user["id"])
+
+
+# 8. View: Concept Handbook
+def render_handbook_view():
+    st.markdown("""
+    <div>
+        <div class="hero-badge">📚 Instant Revision</div>
+        <h2 class="main-title" style="font-size: 1.8rem;">Student Concept & Formula Pocketbook</h2>
+        <p class="sub-title">High-yield mathematical formulas and reasoning shortcuts at your fingertips.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    hb_tab1, hb_tab2 = st.tabs(["📐 Pure Mathematics Formulas", "🧠 Logical Reasoning Rules"])
+
+    with hb_tab1:
+        for section_title, formula_list in formula_book.MATH_FORMULAS.items():
+            with st.expander(f"📌 {section_title}", expanded=True):
+                for item in formula_list:
+                    st.markdown(f"**{item['name']}**")
+                    st.latex(item["formula"].replace("$$", ""))
+                    st.caption(f"📝 {item['desc']}")
+                    st.markdown("---")
+
+    with hb_tab2:
+        for section_title, rules_list in formula_book.REASONING_CONCEPTS.items():
+            with st.expander(f"🧩 {section_title}", expanded=True):
+                for item in rules_list:
+                    st.markdown(f"**{item['name']}**")
+                    st.code(item["rule"], language="text")
+                    st.caption(f"📝 {item['desc']}")
+                    st.markdown("---")
+
+
+# 9. View: Saved History & Bookmarks
+def render_history_view():
+    user = st.session_state["user"]
+    st.markdown("""
+    <div>
+        <div class="hero-badge">🕒 Learning Archive</div>
+        <h2 class="main-title" style="font-size: 1.8rem;">Saved Questions & Revision Hub</h2>
+        <p class="sub-title">Review previously solved questions, bookmark challenging problems, and export notes.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Filters
+    col_f1, col_f2, col_f3 = st.columns([1, 1, 2])
+    with col_f1:
+        cat_filter = st.selectbox("Filter Category", ["All", "Mathematics", "Reasoning"])
+    with col_f2:
+        bookmarked_filter = st.checkbox("⭐ Bookmarked Only", value=False)
+    with col_f3:
+        search_kw = st.text_input("🔍 Search question or topic...", placeholder="Type keywords...")
+
+    history = database.get_user_history(
+        user_id=user["id"],
+        category_filter=cat_filter,
+        search_query=search_kw,
+        bookmarked_only=bookmarked_filter
+    )
+
+    if not history:
+        st.info("No saved questions found matching your filter criteria. Go to 'AI Solver' to solve your first question!")
+        return
+
+    st.caption(f"Showing {len(history)} saved questions")
+
+    for q in history:
+        qid = q["id"]
+        is_bookmarked = (q["is_bookmarked"] == 1)
+        star_icon = "⭐" if is_bookmarked else "☆"
+
+        with st.expander(f"{star_icon} [{q['category']}] {q['topic']} — {q['question_text'][:80]}...", expanded=False):
+            st.markdown(f"**Full Question:** {q['question_text']}")
+            st.caption(f"Saved on: {q['created_at']}")
+
+            col_actions = st.columns([1, 1, 1, 3])
+            with col_actions[0]:
+                btn_bm_label = "Unstar" if is_bookmarked else "⭐ Bookmark"
+                if st.button(btn_bm_label, key=f"hist_bm_{qid}"):
+                    database.toggle_bookmark(qid, user["id"])
+                    st.rerun()
+            with col_actions[1]:
+                if st.button("🗑️ Delete", key=f"hist_del_{qid}"):
+                    database.delete_question(qid, user["id"])
+                    st.success("Deleted from history.")
+                    st.rerun()
+            with col_actions[2]:
+                if st.button("🚀 Load into Solver", key=f"hist_load_{qid}"):
+                    st.session_state["current_question_text"] = q["question_text"]
+                    try:
+                        st.session_state["current_solution"] = json.loads(q["solution_markdown"])
+                    except Exception:
+                        pass
+                    st.success("Loaded! Switch to 'AI Solver' tab.")
+
+            st.markdown("---")
+            # Parse solution data
+            try:
+                sol_obj = json.loads(q["solution_markdown"])
+                render_solution_card(sol_obj, user["id"])
+            except Exception:
+                st.markdown(q["solution_markdown"])
+
+
+# 10. View: Student Analytics
+def render_analytics_view():
+    user = st.session_state["user"]
+    st.markdown("""
+    <div>
+        <div class="hero-badge">📊 Personal Dashboard</div>
+        <h2 class="main-title" style="font-size: 1.8rem;">Student Performance Analytics</h2>
+        <p class="sub-title">Track your problem-solving momentum and practice accuracy over time.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    stats = database.get_student_dashboard_stats(user["id"])
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Total Solved", stats["total_questions"], delta="Saved in Archive")
+    m2.metric("Math Questions", stats["math_questions"], delta="📐 Pure Math")
+    m3.metric("Reasoning Questions", stats["reasoning_questions"], delta="🧠 Logic & Series")
+    m4.metric("Practice Accuracy", f"{stats['practice_accuracy']}%", delta=f"{stats['practice_correct']}/{stats['practice_attempts']} Correct")
+
+    st.markdown("---")
+
+    col_chart, col_study = st.columns(2)
+    with col_chart:
+        st.markdown("### 📈 Practice Engagement")
+        st.write(f"- **Total Practice Exercises Attempted:** {stats['practice_attempts']}")
+        st.write(f"- **Correct Answers on First Try:** {stats['practice_correct']}")
+        st.write(f"- **Bookmarked for Revision:** {stats['bookmarked_questions']}")
+
+        progress_val = min(1.0, stats["practice_accuracy"] / 100.0) if stats["practice_attempts"] > 0 else 0.0
+        st.progress(progress_val)
+        st.caption(f"Mastery Score: {stats['practice_accuracy']}%")
+
+    with col_study:
+        st.markdown("### 🎯 Recommended Daily Routine")
+        st.info("""
+        1. **Solve 3 Math Concept Questions** (Algebra / Calculus / Geometry) daily.
+        2. **Complete all generated Practice Problems** immediately after reading the solution.
+        3. **Review Bookmarked Questions** every Sunday before exam day.
+        4. **Consult Concept Pocketbook** for high-frequency formulas and alphabet shortcut rules.
+        """)
+
+
+# 11. View: Profile Settings
+def render_profile_view():
+    user = st.session_state["user"]
+    st.markdown("""
+    <div>
+        <div class="hero-badge">⚙️ Account Settings</div>
+        <h2 class="main-title" style="font-size: 1.8rem;">Student Profile & Preferences</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("### Update Profile")
+        edit_name = st.text_input("Full Name", value=user["name"])
+        edit_exam = st.selectbox(
+            "Target Examination",
+            ["JEE Mains & Advanced", "SSC CGL / Banking / Railways", "CAT / Management Aptitude", "Olympiad / High School", "University / College Degree", "General Aptitude"],
+            index=0
+        )
+
+        if st.button("💾 Save Profile Changes", type="primary"):
+            ok, msg = database.update_user_profile(user["id"], edit_name, edit_exam)
+            if ok:
+                user["name"] = edit_name
+                user["target_exam"] = edit_exam
+                st.session_state["user"] = user
+                st.success(msg)
                 st.rerun()
+            else:
+                st.error(msg)
 
-    if st.session_state.artifacts:
-        st.markdown("#### 📥 Your Downloadable Files:")
-        for idx, art in enumerate(reversed(st.session_state.artifacts)):
-            st.markdown(
-                f"""
-                <div class="artifact-box">
-                    <div class="artifact-box-title">📄 {art['name']}</div>
-                    <div class="artifact-box-desc">Class {st.session_state.class_level} • Markdown Document</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            st.download_button(
-                label=f"⬇️ Download {art['name']}",
-                data=art["content"],
-                file_name=art["name"],
-                mime="text/markdown",
-                key=f"dl_page_art_{idx}",
-                use_container_width=True,
-            )
+    with col2:
+        st.markdown("### 🎓 About ApexSolve")
+        st.markdown("""
+        **ApexSolve** is an advanced AI Math & Logical Reasoning system engineered specifically for students, competitive exam aspirants, and academic self-learners.
+
+        - **Lead Developer:** Naman Shukla
+        - **Contact / Feedback:** `namanshukla9889@gmail.com`
+        - **Core AI Engine:** Google Gemini (High Precision Flash Models)
+        - **Security:** Bcrypt Password Hashing + SQLite Local Database
+        - **Formula Rendering:** Standard LaTeX & KaTeX
+        """)
+
+
+# 12. Main Controller
+def main():
+    if not st.session_state["user"]:
+        render_auth_page()
     else:
-        st.info("No files generated yet. Use the creator above to generate your first worksheet or cheat sheet!")
+        selected_menu = render_sidebar()
+
+        if selected_menu == "🚀 AI Solver":
+            render_solver_view()
+        elif selected_menu == "🎯 Practice Arena":
+            render_practice_arena_view()
+        elif selected_menu == "📚 Concept Handbook":
+            render_handbook_view()
+        elif selected_menu == "🕒 Saved History":
+            render_history_view()
+        elif selected_menu == "📊 My Analytics":
+            render_analytics_view()
+        elif selected_menu == "⚙️ Profile Settings":
+            render_profile_view()
 
 
-# ─────────────────────────────────────────────
-# VIEW 5: ℹ️ ABOUT (Creator & Product Specification)
-# ─────────────────────────────────────────────
-
-elif st.session_state.active_nav == "ℹ️ About":
-    st.markdown(
-        """
-        <div class="about-hero">
-            <span class="about-badge">PRODUCT SPECIFICATION & ARCHITECTURE</span>
-            <div class="about-title">📐 AI Math Tutor</div>
-            <div class="about-sub">
-                A state-of-the-art educational AI companion engineered to empower school students (Class 1–12) 
-                with conceptual clarity, step-by-step problem walkthroughs, and proactive practice testing.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # 1. Creator Profile Card
-    st.markdown(
-        """
-        <div class="profile-card">
-            <h3 style="color:#fbfbfa; margin-top:0;">👨‍💻 About the Creator</h3>
-            <p style="color:#d4d4d8; font-size:1rem; line-height:1.7;">
-                <b>Creator & Developer:</b> Naman Shukla<br>
-                <b>Email:</b> <a href="mailto:ramanshukla2005@gmail.com" style="color:#e5987d; text-decoration:none;">ramanshukla2005@gmail.com</a><br>
-                <b>GitHub:</b> <a href="https://github.com/namanshukla93" target="_blank" style="color:#e5987d; text-decoration:none;">github.com/namanshukla93</a><br>
-                <b>Project Repository:</b> <a href="https://github.com/namanshukla93/ai-math-tutor" target="_blank" style="color:#e5987d; text-decoration:none;">github.com/namanshukla93/ai-math-tutor</a>
-            </p>
-            <p style="color:#a1a1aa; font-size:0.92rem; line-height:1.6;">
-                Naman Shukla is an AI & Python software developer passionate about crafting high-impact, human-centric educational technologies. 
-                AI Math Tutor was developed to eliminate math anxiety, making top-tier personalized tutoring accessible to every school student regardless of background.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # 2. Product Architecture & Core Features
-    st.markdown(
-        """
-        <div class="profile-card">
-            <h3 style="color:#fbfbfa; margin-top:0;">⚡ Product Architecture & Highlights</h3>
-            <ul style="color:#d4d4d8; font-size:0.95rem; line-height:1.8;">
-                <li><b>Two-Step Pedagogical Engine:</b> Walk students through each calculation step conceptually, and then automatically synthesize a similar problem for active self-testing.</li>
-                <li><b>Real-time Streaming Engine:</b> Token-by-token response streaming with <code>generate_content_stream</code> and <code>st.write_stream</code>.</li>
-                <li><b>Multi-Session Chat History:</b> Manage multiple chat conversations with auto-titles, switching, and deletion directly from the sidebar.</li>
-                <li><b>Universal Multimodal Perception:</b> Process images, PDF worksheets, and raw text files via Google Gemini Vision.</li>
-                <li><b>Claude-Style Artifacts System:</b> On-demand creation of printable practice worksheets, formula cheat sheets, and solved problem sets downloadable as standard Markdown documents.</li>
-                <li><b>Dynamic Grade Adaptation:</b> Adjust vocabulary, tone, and CBSE/NCERT curriculum benchmarks across 4 age bands (Class 1–3, 4–6, 7–10, 11–12).</li>
-                <li><b>Bespoke Dark Aesthetic:</b> Distraction-free, responsive dark canvas with dynamic typography switching and zero platform watermarks.</li>
-            </ul>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+if __name__ == "__main__":
+    main()

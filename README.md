@@ -1,169 +1,110 @@
-# 🧮 AI Math Tutor — Powered by Gemini
+# 📐 ApexSolve — AI Math & Logical Reasoning Master
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ai-math-tutor-bynamanshukla.streamlit.app/)
+> **An intelligent, student-centric web platform engineered for rigorous mathematical proofs, logical reasoning deductions, and adaptive practice problems.**
 
-> **Covers Class 1 to Class 12 — from basic counting to calculus basics**
-
-> 🌐 **Live Working Demo:** [https://ai-math-tutor-bynamanshukla.streamlit.app/](https://ai-math-tutor-bynamanshukla.streamlit.app/)  
-> 💻 **GitHub Repository:** [github.com/namanshukla93/ai-math-tutor](https://github.com/namanshukla93/ai-math-tutor)
-
----
-
-## 📌 Problem
-
-Many school students (Class 1–12) struggle with math but don't always have a teacher available to clear doubts. Hiring a private tutor is expensive. Existing AI tools often just dump the final answer without explaining the steps — or refuse to provide full solutions, leaving students confused.
-
-## 💡 Solution
-
-An AI math tutor with a **Teach First, Then Test (Worked Example + Practice)** model:
-- **Detailed Step-by-Step Solution First**: Explains the concept simply, shows complete step-by-step working, and highlights the final answer.
-- **Auto-Generated Similar Practice Question**: Immediately after solving, the tutor creates a similar practice problem on its own so the student can apply what they just learned.
-- **Active Evaluation**: When the student replies with their answer, the tutor checks it, celebrates correct solutions 🎉, and gently guides them through any mistakes.
-- **ChatGPT & Gemini Style Interface**: Clean, minimalist conversational UI with direct image/photo attachment right in the prompt bar.
-
-## 🎯 Target Users
-
-Students of **Class 1 through Class 12** — covering topics from basic counting and shapes (Class 1–3), to fractions, decimals, and word problems (Class 4–6), to algebra, geometry, and trigonometry (Class 7–10), to statistics and calculus basics (Class 11–12).
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/UI-Streamlit-red.svg)](https://streamlit.io/)
+[![Google Gemini](https://img.shields.io/badge/AI-Google%20Gemini-orange.svg)](https://ai.google.dev/)
+[![SQLite](https://img.shields.io/badge/Database-SQLite%203-lightgrey.svg)](https://sqlite.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-## ✨ Features
+## 🌟 Overview
 
-| Feature | Description |
-|---|---|
-| 🌐 **Live Web App** | 24/7 accessible on any device at [ai-math-tutor-bynamanshukla.streamlit.app](https://ai-math-tutor-bynamanshukla.streamlit.app/) |
-| ✳️ **Claude-Style Interface** | Iconic warm terracotta & dark charcoal theme with Newsreader & Plus Jakarta Sans typography |
-| 📁 **Multi-File Access & Scanner** | Upload **PDFs, Images (PNG/JPG), Text notes, Worksheets, or Code** directly in the chat bar |
-| 📄 **File Creation (Claude Artifacts)** | Creates downloadable **Practice Worksheets**, **Formula Cheat Sheets**, and **Solved Problem Sets** (`.md`) |
-| 🎓 **Class Selector** | Class 1 to 12 — automatically adapts vocabulary, examples, and CBSE/NCERT curriculum difficulty |
-| 📝 **Detailed Worked Solutions** | Clear step-by-step conceptual walkthroughs showing every single calculation |
-| 🎯 **Auto Similar Practice** | Tutor automatically creates a similar practice problem for active self-testing |
-| 📋 **Parent / Session Summary** | Generates a concise progress report for parents and teachers |
+**ApexSolve** transforms how students learn Mathematics and Analytical Reasoning. Unlike generic chatbots that hallucinate or jump directly to answers, ApexSolve acts like a personal professor:
+1. **Identifies Core Concept & Law:** Explains *why* a particular theorem or formula is selected.
+2. **Shows Every Intermediate Step:** Provides full algebraic steps rendered in textbook-grade KaTeX LaTeX.
+3. **Generates Tailored Practice Problems:** Automatically creates 2–3 similar practice problems (Foundation, Standard, and Challenge) with instant answer verification, hints, and full step-by-step solutions.
+4. **Student Productive Workspace:** Features an interactive rough scratchpad, built-in formula pocketbook, question bookmarks, and performance analytics.
 
 ---
 
-## 🗂️ Project Structure
+## 🚀 Key Features
 
-```
-ai-math-tutor/
-│
-├── app.py                  # Main Streamlit web app (UI + chat logic)
-├── tutor_prompt.py         # The system prompt that controls tutor behavior
-├── utils.py                # Helper functions (call Gemini API, format responses)
-│
-├── tests/
-│   └── test_questions.csv  # 30 test questions with expected behaviors
-│
-├── run_tests.py            # Script to test all 30 questions automatically
-├── requirements.txt        # Python packages needed to run the app
-│
-├── .env.example            # Template showing which env variables are needed
-├── .gitignore              # Prevents secrets from being committed to git
-└── README.md               # This file
+- **Dual-Domain Engine:**
+  - 📐 **Mathematics:** Algebra, Calculus, Trigonometry, Geometry, Probability, Coordinate Geometry.
+  - 🧠 **Logical Reasoning:** Number/Letter Series, Syllogisms, Blood Relations, Direction Sense, Coding-Decoding.
+- **Multimodal Input:** Type equations directly, select test presets, or upload a photo of handwritten/textbook problems.
+- **Interactive Practice Arena:** Test yourself on similar questions immediately, with interactive answer checking and collapsible hints.
+- **Student Concept & Formula Pocketbook:** Built-in high-yield formula sheets (Algebra, Trig, Calculus) and reasoning patterns (EJOTY, Reverse pairs, Syllogisms) accessible anytime.
+- **Personal Learning Archive:** SQLite-powered question history with keyword search, category filtering, and one-click bookmarking for exam revision.
+- **Secure Student Authentication:** Complete signup/login system with industry-standard `bcrypt` salted password hashing.
+
+---
+
+## 🏗️ Architecture & Tech Stack
+
+```mermaid
+graph TD
+    A[Student / Browser] -->|Streamlit UI| B[app.py Web Layer]
+    B -->|Bcrypt / Auth Queries| C[(SQLite: apexsolve.db)]
+    B -->|Formula Handbook| D[formula_book.py]
+    B -->|Structured Prompts| E[solver.py AI Engine]
+    E -->|Automated Fallback API Calls| F[Google Gemini API]
+    F -->|JSON Response| E
+    E -->|KaTeX / Proofs / Practice| B
 ```
 
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend UI** | Streamlit + Custom Modern CSS | Clean, responsive student interface with KaTeX math rendering |
+| **Backend & Logic** | Python 3.10+ | Core orchestration, data validation, and session state |
+| **AI Reasoning Engine** | Google Gemini (`google-genai`) | Rigorous step-by-step deductions and adaptive practice generation |
+| **Database** | SQLite3 + Bcrypt | User accounts, solved questions archive, and practice attempt logs |
+
 ---
 
-## 🚀 How to Run Locally
+## ⚡ Quick Start
 
-### Prerequisites
-- Python 3.9 or higher
-- A Google Gemini API key (free at [aistudio.google.com](https://aistudio.google.com))
-
-### Steps
-
+### 1. Clone Repository & Setup Virtual Environment
 ```bash
-# 1. Clone the repo
-git clone <your-repo-url>
+git clone https://github.com/namanshukla93/ai-math-tutor.git
 cd ai-math-tutor
 
-# 2. Install dependencies
+# Optional: Create virtual environment
+python -m venv venv
+venv\Scripts\activate   # On Windows
+# source venv/bin/activate # On Linux/macOS
+```
+
+### 2. Install Dependencies
+```bash
 pip install -r requirements.txt
+```
 
-# 3. Set your API key
-#    Copy .env.example to .env and fill in your key
-copy .env.example .env
-# Then open .env and replace "your_key_here" with your actual key
+### 3. Configure Gemini API Key
+Create a `.env` file in the root directory:
+```env
+GEMINI_API_KEY=your_actual_gemini_api_key_here
+```
+*(Get a free Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey))*
 
-# 4. Run the app
+### 4. Run the Application
+```bash
 streamlit run app.py
 ```
+Open your browser at `http://localhost:8501`.
 
 ---
 
-## 🧪 Test Results
+## 🧪 Running Verification Tests
 
-Automated test suite: **30 questions × 10 categories** — run with `python run_tests.py`.
-
-### Final Score: 30/30 PASS — 100% ✅ *(after prompt tuning)*
-
-| Category | Tests | Pass | Notes |
-|---|---|---|---|
-| Normal Math | 7 | 7 | ✅ All pass, incl. shape-name hint test |
-| Word Problem | 4 | 4 | ✅ |
-| Algebra | 3 | 3 | ✅ |
-| Geometry | 2 | 2 | ✅ |
-| Trigonometry | 1 | 1 | ✅ Tutor correct; AI judge hit rate limit (auto-retried) |
-| Statistics | 1 | 1 | ✅ |
-| Calculus | 2 | 2 | ✅ |
-| Demands Answer | 3 | 3 | ✅ Politely refuses, gives hint instead |
-| Wrong Answer | 3 | 3 | ✅ Asks student to verify by substitution first |
-| Off-Topic | 4 | 4 | ✅ Always redirects to math |
-
-**Prompt iterations needed:** 2 tuning passes
-- v1 → 66.7% (8 rate-limit errors, 2 behavioral fails)
-- v2 → 93.3% (rate-limit retry fix + Rule 5 rewrite)
-- v3 → **100%** (Rule 1 strengthened to block answer leaks via cultural references)
-
-### How tests are evaluated
-
-Each question is checked with a **2-layer pipeline**:
-
-1. **Keyword check** (instant, no API cost) — did the tutor include any forbidden direct-answer phrases?
-2. **AI-as-judge** — a second Gemini call reads the tutor response and verifies it follows the expected behavior. Retries automatically on rate limits (10s → 20s → 40s backoff).
-
+Run the complete 5-phase test suite (Security, Database, Formulas, Math Solver, Reasoning Solver):
 ```bash
-python run_tests.py                        # run all 30 tests
-python run_tests.py --fast                 # keyword check only (no API cost)
-python run_tests.py --category off_topic   # filter one category
-python run_tests.py --save results.md      # export markdown report
+python run_tests.py
 ```
 
 ---
 
-## ⚠️ Limitations
+## 👤 Author & Support
 
-- AI can make mistakes — always verify with a teacher or textbook.
-- Works best with standard Class 1–12 Indian school math curriculum.
-- Requires an internet connection (calls Gemini API).
-- No login or history saved between sessions.
-
----
-
-## 🔮 Future Work (not built yet)
-
-- Multilingual support (Hindi, regional languages)
-- Progress tracking with a database
-- Voice input for younger students
+- **Developer:** Naman Shukla
+- **Email:** [namanshukla9889@gmail.com](mailto:namanshukla9889@gmail.com)
+- **GitHub:** [@namanshukla93](https://github.com/namanshukla93)
 
 ---
 
-## 🛠️ Tech Stack
+## 📄 License
 
-| Tool | Why we chose it |
-|---|---|
-| Python | Simple, widely used, beginner-friendly |
-| Streamlit | Turns Python code into a web app with almost no extra effort |
-| Google Gemini API | Free tier available, great at instruction-following for all grade levels |
-| python-dotenv | Loads the API key from a .env file safely |
-
----
-
-## 📸 Screenshots
-
-*(Will be added after Phase 6 — UI polish)*
-
----
-
-*Built as a portfolio project for an internship application to Cuemath.*
-*⚠️ AI can make mistakes — always ask a teacher to verify important answers.*
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
