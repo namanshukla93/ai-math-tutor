@@ -230,6 +230,32 @@ def render_sidebar():
             if scratch_text:
                 st.caption(f"Chars: {len(scratch_text)}")
 
+        # Gemini API Key configuration
+        api_ok = solver.is_api_key_configured()
+        with st.expander("🔑 Gemini API Settings", expanded=not api_ok):
+            if api_ok:
+                st.markdown("<span style='color:#10b981; font-weight:600; font-size:0.85rem;'>🟢 AI Engine: Active</span>", unsafe_allow_html=True)
+            else:
+                st.markdown("<span style='color:#f59e0b; font-weight:600; font-size:0.85rem;'>⚠️ API Key Required</span>", unsafe_allow_html=True)
+
+            cur_k = solver.get_configured_api_key() or ""
+            mask_text = f"...{cur_k[-6:]}" if len(cur_k) > 6 else ""
+
+            sidebar_key_val = st.text_input(
+                "Gemini API Key:",
+                type="password",
+                placeholder=f"Active ({mask_text})" if mask_text else "Paste Gemini API Key...",
+                key="sidebar_api_key_input",
+                help="Enter your free API key from Google AI Studio (aistudio.google.com)"
+            )
+            if st.button("💾 Save Key", use_container_width=True, key="save_sidebar_key_btn"):
+                if sidebar_key_val.strip():
+                    st.session_state["gemini_api_key"] = sidebar_key_val.strip()
+                    import os
+                    os.environ["GEMINI_API_KEY"] = sidebar_key_val.strip()
+                    st.success("API Key saved!")
+                    st.rerun()
+
         st.markdown("---")
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state["user"] = None
@@ -278,6 +304,22 @@ def render_solver_view():
             preset_question = "Find the missing number in the sequence: 4, 9, 19, 39, 79, ?"
         if ex_col4.button("Relations", use_container_width=True):
             preset_question = "A is the brother of B. B is the daughter of C. D is the father of C. How is A related to D?"
+
+    if not solver.is_api_key_configured():
+        st.warning("⚠️ **Gemini API Key is needed for live solution generation.**")
+        st.caption("💡 Enter your free Gemini API key below to unlock instant solving for this session:")
+        c_sk1, c_sk2 = st.columns([3, 1])
+        with c_sk1:
+            solver_k = st.text_input("Gemini API Key:", type="password", placeholder="Paste API Key here...", key="solver_key_input")
+        with c_sk2:
+            st.write("")
+            if st.button("🚀 Activate Key", use_container_width=True, key="solver_activate_btn"):
+                if solver_k.strip():
+                    st.session_state["gemini_api_key"] = solver_k.strip()
+                    import os
+                    os.environ["GEMINI_API_KEY"] = solver_k.strip()
+                    st.success("API Key successfully activated!")
+                    st.rerun()
 
     # Question Input
     default_text = preset_question if preset_question else st.session_state["current_question_text"]
@@ -505,6 +547,22 @@ def render_practice_arena_view():
             arena_topic = st.selectbox("Reasoning Topic", ["Number & Letter Series", "Syllogisms & Venn Logic", "Blood Relations", "Direction Sense", "Coding-Decoding", "Seating Arrangement", "Mathematical Puzzles"])
     with col3:
         arena_level = st.selectbox("Difficulty", ["Foundation / Beginner", "Standard / Intermediate", "Advanced / Challenge"])
+
+    if not solver.is_api_key_configured():
+        st.warning("⚠️ **Gemini API Key is needed for live problem generation.**")
+        st.caption("💡 Enter your free Gemini API key below to unlock instant generation for this session:")
+        c_k1, c_k2 = st.columns([3, 1])
+        with c_k1:
+            arena_k = st.text_input("Gemini API Key:", type="password", placeholder="Paste API Key here...", key="arena_key_input")
+        with c_k2:
+            st.write("")
+            if st.button("🚀 Activate Key", use_container_width=True, key="arena_activate_btn"):
+                if arena_k.strip():
+                    st.session_state["gemini_api_key"] = arena_k.strip()
+                    import os
+                    os.environ["GEMINI_API_KEY"] = arena_k.strip()
+                    st.success("API Key successfully activated!")
+                    st.rerun()
 
     if st.button("✨ Generate New Practice Challenge", type="primary", use_container_width=True):
         # Build a full, canonical practice question per topic so AI returns proper structured JSON

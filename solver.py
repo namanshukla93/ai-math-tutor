@@ -22,17 +22,51 @@ CANDIDATE_MODELS = [
 ]
 
 
+def get_configured_api_key() -> Optional[str]:
+    """Retrieves API key from session state, env vars, or Streamlit secrets."""
+    # 1. Check streamlit session state if running inside streamlit
+    try:
+        import streamlit as st
+        if hasattr(st, "session_state") and st.session_state.get("gemini_api_key"):
+            val = str(st.session_state["gemini_api_key"]).strip()
+            if val and val != "your_gemini_api_key_here":
+                return val
+    except Exception:
+        pass
+
+    # 2. Check environment variable
+    api_key = os.getenv("GEMINI_API_KEY")
+    if api_key and api_key != "your_gemini_api_key_here":
+        return api_key.strip()
+
+    # 3. Check Streamlit secrets
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets"):
+            if "GEMINI_API_KEY" in st.secrets:
+                val = str(st.secrets["GEMINI_API_KEY"]).strip()
+                if val and val != "your_gemini_api_key_here":
+                    return val
+            if "general" in st.secrets and "GEMINI_API_KEY" in st.secrets["general"]:
+                val = str(st.secrets["general"]["GEMINI_API_KEY"]).strip()
+                if val and val != "your_gemini_api_key_here":
+                    return val
+    except Exception:
+        pass
+
+    return None
+
+
+def is_api_key_configured() -> bool:
+    """Checks if a valid Gemini API key is configured."""
+    key = get_configured_api_key()
+    return bool(key and len(key) > 10)
+
+
 def get_gemini_client() -> Optional[genai.Client]:
     """Initializes and returns the Google GenAI client."""
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = get_configured_api_key()
     if not api_key:
-        try:
-            import streamlit as st
-            if hasattr(st, "secrets") and "GEMINI_API_KEY" in st.secrets:
-                api_key = st.secrets["GEMINI_API_KEY"]
-        except Exception:
-            pass
-    if not api_key or api_key == "your_gemini_api_key_here":
         return None
     try:
         return genai.Client(api_key=api_key)
@@ -160,7 +194,7 @@ def solve_question(question_text: str, image_file: Optional[Image.Image] = None,
     """
     client = get_gemini_client()
     if not client:
-        return False, {}, "Gemini API key is not configured. Please set GEMINI_API_KEY in .env file."
+        return False, {}, "Gemini API key is not configured. Please enter your Gemini API key in the sidebar or configure Secrets on Streamlit Cloud."
 
     if not question_text.strip() and not image_file:
         return False, {}, "Please provide a question in text or upload an image."
