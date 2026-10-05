@@ -225,38 +225,76 @@ def generate_parent_summary(
 
 
 # ─────────────────────────────────────────────
-# 4. SCAN PROBLEM FROM IMAGE (Gemini Vision)
+# 4. SCAN & ACCESS ALL FILE TYPES (Images, PDFs, Text, Code)
 # ─────────────────────────────────────────────
 
-def extract_math_from_image(
+def extract_content_from_file(
     api_key: str,
-    image_bytes: bytes,
-    mime_type: str,
+    file_bytes: bytes,
+    file_name: str,
+    mime_type: str = "",
 ) -> str:
     """
-    Uses Gemini Vision to read a math problem from an uploaded image.
-
-    HOW IT WORKS:
-      Gemini is multimodal — it understands both text AND images in the
-      same request. We send the image alongside a prompt asking it to
-      extract only the math question text. That text is then treated as
-      a normal student question by the tutor.
-
-    PARAMETERS:
-      api_key     — The Gemini API key.
-      image_bytes — Raw bytes of the uploaded image file.
-      mime_type   — MIME type e.g. "image/jpeg", "image/png".
+    Reads and extracts math questions/content from ANY file type:
+      - Images (PNG, JPG, JPEG, WEBP, BMP)
+      - PDF Documents (Worksheets, question papers, textbook pages)
+      - Text & Code (.txt, .md, .csv, .py, .json)
 
     RETURNS:
-      The extracted math problem as a plain text string, or a friendly
-      error message on failure.
+      Extracted plain text or structured math problems.
     """
-    try:
-        client = genai.Client(api_key=api_key)
+    ext = file_name.lower().split(".")[-1] if "." in file_name else ""
 
-        # Build a multimodal Content object with two parts:
-        #   Part 1 — the image (inline_data / Blob)
-        #   Part 2 — text instruction: what to do with the image
+    # 1. Plain text / Markdown / CSV / Code files — read directly
+    if ext in ["txt", "md", "csv", "tsv", "py", "json"] or "text" in mime_type:
+        try:
+            text = file_bytes.decode("utf-8", errors="ignore").strip()
+            if len(text) > 8000:
+                text = text[:8000] + "\n\n... [File truncated for length]"
+            return text if text else "The uploaded text file is empty."
+        except Exception as e:
+            return f"Error reading text file: {e}"
+
+    # 2. PDF Documents — send to Gemini Multimodal
+    if ext == "pdf" or "pdf" in mime_type:
+        try:
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=[
+                    types.Content(
+                        role="user",
+                        parts=[
+                            types.Part(
+                                inline_data=types.Blob(
+                                    mime_type="application/pdf",
+                                    data=file_bytes,
+                                )
+                            ),
+                            types.Part(text=(
+                                f"Read this PDF file ('{file_name}') carefully. "
+                                "Extract all math problems, equations, exercises, and questions shown in it. "
+                                "Output the extracted questions clearly with question numbers and symbols. "
+                                "Preserve all fractions, equations, numbers, and variables accurately."
+                            )),
+                        ],
+                    )
+                ],
+                config=types.GenerateContentConfig(
+                    temperature=0.1,
+                    max_output_tokens=1024,
+                ),
+            )
+            text_parts = [p.text for c in response.candidates for p in c.content.parts if not p.thought and p.text]
+            res = "\n".join(text_parts).strip() if text_parts else (response.text or "")
+            return res if res else "Could not extract text from this PDF."
+        except Exception as e:
+            return f"Error reading PDF: {str(e)[:120]}"
+
+    # 3. Images (JPEG, PNG, WEBP, etc.) — send to Gemini Vision
+    try:
+        actual_mime = mime_type if mime_type and "/" in mime_type else f"image/{ext if ext != 'jpg' else 'jpeg'}"
+        client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
             model=GEMINI_MODEL,
             contents=[
@@ -265,8 +303,8 @@ def extract_math_from_image(
                     parts=[
                         types.Part(
                             inline_data=types.Blob(
-                                mime_type=mime_type,
-                                data=image_bytes,
+                                mime_type=actual_mime,
+                                data=file_bytes,
                             )
                         ),
                         types.Part(text=(
@@ -282,35 +320,82 @@ def extract_math_from_image(
                 )
             ],
             config=types.GenerateContentConfig(
-                temperature=0.1,       # Very low — precise extraction, not creative
-                max_output_tokens=256,
+                temperature=0.1,
+                max_output_tokens=512,
             ),
         )
-
-        # Extract text parts (handles thinking models too)
-        text_parts = []
-        for candidate in response.candidates:
-            for part in candidate.content.parts:
-                if not part.thought and part.text:
-                    text_parts.append(part.text)
-
-        result = "\n".join(text_parts).strip() if text_parts else ""
-        if not result:
-            try:
-                result = response.text or ""
-            except Exception:
-                pass
-
-        if not result:
-            return "Could not extract text from the image. Please try a clearer photo."
-
-        return result
-
+        text_parts = [p.text for c in response.candidates for p in c.content.parts if not p.thought and p.text]
+        res = "\n".join(text_parts).strip() if text_parts else (response.text or "")
+        return res if res else "Could not extract text from the image."
     except Exception as e:
         err = str(e).lower()
         if "429" in err or "quota" in err:
             return "API limit reached. Please wait a moment and try again."
-        elif "image" in err or "media" in err or "mime" in err:
-            return "Could not process this image format. Please try a JPG or PNG photo."
-        else:
-            return f"Image reading failed: {str(e)[:120]}"
+        return f"File reading failed: {str(e)[:120]}"
+
+
+def extract_math_from_image(api_key: str, image_bytes: bytes, mime_type: str) -> str:
+    """Backward-compatible wrapper for image extraction."""
+    return extract_content_from_file(api_key, image_bytes, "image.jpg", mime_type)
+
+
+# ─────────────────────────────────────────────
+# 5. CLAUDE-STYLE ARTIFACT GENERATOR (Creates Files)
+# ─────────────────────────────────────────────
+
+def create_math_artifact(
+    api_key: str,
+    topic: str,
+    class_level: int,
+    artifact_type: str = "worksheet",
+) -> tuple[str, str]:
+    """
+    Creates a downloadable file (Artifact) like Claude does.
+
+    ARTIFACT TYPES:
+      - 'worksheet': Printable practice worksheet with questions + answer key
+      - 'cheat_sheet': Formula & Concept Revision Sheet
+      - 'solution_set': Step-by-step solved master set
+
+    RETURNS:
+      (filename, file_content_markdown_string)
+    """
+    prompts = {
+        "worksheet": (
+            f"Generate a complete, printable math practice worksheet for Class {class_level} on topic: '{topic}'.\n"
+            "Include:\n"
+            "1. Header: School Math Worksheet (Class {class_level})\n"
+            "2. Section A: 5 Easy warm-up problems\n"
+            "3. Section B: 5 Standard CBSE/NCERT level problems\n"
+            "4. Section C: 2 Word / Challenge problems\n"
+            "5. Answer Key at the very end with brief solutions.\n"
+            "Format cleanly in Markdown."
+        ),
+        "cheat_sheet": (
+            f"Generate a comprehensive Formula & Revision Cheat Sheet for Class {class_level} on topic: '{topic}'.\n"
+            "Include:\n"
+            "1. Key Definitions & Rules\n"
+            "2. All Important Formulas & Equations (with LaTeX)\n"
+            "3. Step-by-Step Problem Solving Strategy\n"
+            "4. Common Mistakes to Avoid\n"
+            "Format cleanly in Markdown."
+        ),
+        "solution_set": (
+            f"Generate a Master Solved Problem Set for Class {class_level} on: '{topic}'.\n"
+            "Include 5 classic exam-style problems with complete, detailed step-by-step solutions for each."
+        ),
+    }
+
+    instruction = prompts.get(artifact_type, prompts["worksheet"])
+    filename = f"math_{artifact_type}_class_{class_level}_{topic.lower().replace(' ', '_')[:20]}.md"
+
+    try:
+        content = get_gemini_response(
+            api_key=api_key,
+            system_prompt=f"You are an expert curriculum designer and math teacher for Indian school students (Class {class_level}).",
+            chat_history=[],
+            user_message=instruction,
+        )
+        return filename, content
+    except Exception as e:
+        return f"error_{artifact_type}.txt", f"Failed to generate file: {e}"

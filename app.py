@@ -1,15 +1,21 @@
-# app.py — AI Math Tutor (ChatGPT / Gemini style minimalist interface)
+# app.py — AI Math Tutor with Claude-Style Interface, Multi-File Scanning & File Creation (Artifacts)
 #
-# Features:
-#   - Minimalist, distraction-free conversational UI (like ChatGPT & Gemini)
-#   - Worked detailed solution first -> Auto-generated similar practice question
-#   - Direct photo/image attachment in the chat bar (using Gemini Vision)
-#   - Class 1–12 selector & NCERT/CBSE level adaptation
-#   - Clean collapsible sidebar with "+ New Chat" and "Parent Summary"
+# Highlights:
+#   - Claude's iconic warm terracotta & charcoal aesthetic
+#   - Multi-File Scanning: Images (PNG/JPG), PDFs, Text files, Worksheets, Code
+#   - Claude-Style Artifacts: Create & download Worksheets, Formula Cheat Sheets & Study Guides
+#   - Teach-First (Detailed Solution) -> Auto-generated Similar Practice Question
+#   - Clean, distraction-free conversational experience
 
 import streamlit as st
 from tutor_prompt import get_system_prompt
-from utils import load_api_key, get_gemini_response, generate_parent_summary, extract_math_from_image
+from utils import (
+    load_api_key,
+    get_gemini_response,
+    generate_parent_summary,
+    extract_content_from_file,
+    create_math_artifact,
+)
 
 
 # ─────────────────────────────────────────────
@@ -17,40 +23,40 @@ from utils import load_api_key, get_gemini_response, generate_parent_summary, ex
 # ─────────────────────────────────────────────
 
 st.set_page_config(
-    page_title="AI Math Tutor",
-    page_icon="📐",
+    page_title="Claude Math Tutor",
+    page_icon="✳️",
     layout="centered",
     initial_sidebar_state="expanded",
 )
 
 
 # ─────────────────────────────────────────────
-# CHATGPT / GEMINI STYLE MINIMALIST CSS
+# CLAUDE-STYLE ICONIC WARM THEME CSS
 # ─────────────────────────────────────────────
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap');
 
 html, body, [class*="css"], .stApp {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    color: #ececf1;
+    color: #ececec;
 }
 
-/* ── App background (Clean dark tone like ChatGPT / Gemini) ── */
+/* ── Claude Warm Dark Canvas ── */
 .stApp {
-    background-color: #0e1117 !important;
+    background-color: #18181b !important;
 }
 
-/* ── Centered Main Container ── */
+/* ── Centered Claude Reading Column ── */
 .block-container {
     max-width: 820px !important;
     padding-top: 1.5rem !important;
     padding-bottom: 7rem !important;
 }
 
-/* ── Clean Header ── */
-.chat-header {
+/* ── Claude Top Navigation Bar ── */
+.claude-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -58,76 +64,78 @@ html, body, [class*="css"], .stApp {
     margin-bottom: 1.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-.chat-header-title {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #ffffff;
+.claude-brand {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fbfbfa;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
-.chat-header-badge {
-    background: rgba(99, 102, 241, 0.18);
-    border: 1px solid rgba(129, 140, 248, 0.4);
-    color: #a5b4fc;
-    font-size: 0.82rem;
+.claude-sparkle {
+    color: #da7756;
+    font-size: 1.4rem;
+}
+.claude-badge {
+    background: rgba(218, 119, 86, 0.15);
+    border: 1px solid rgba(218, 119, 86, 0.35);
+    color: #e5987d;
+    font-size: 0.85rem;
     font-weight: 600;
-    padding: 0.25rem 0.75rem;
+    padding: 0.25rem 0.8rem;
     border-radius: 9999px;
 }
 
-/* ── Welcome Screen (ChatGPT / Gemini style) ── */
-.welcome-container {
+/* ── Claude Welcome Screen ── */
+.claude-welcome {
     text-align: center;
-    padding: 3.5rem 1rem 2rem 1rem;
+    padding: 3rem 1rem 1.8rem 1rem;
 }
-.welcome-hero-icon {
-    font-size: 3rem;
-    margin-bottom: 0.8rem;
-}
-.welcome-title {
+.claude-avatar-hero {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(218, 119, 86, 0.12);
+    border: 1.5px solid rgba(218, 119, 86, 0.3);
+    color: #da7756;
     font-size: 2rem;
-    font-weight: 700;
-    color: #ffffff;
-    margin-bottom: 0.5rem;
-    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
 }
-.welcome-sub {
-    font-size: 1rem;
-    color: #94a3b8;
-    max-width: 540px;
-    margin: 0 auto 2rem auto;
+.claude-greeting {
+    font-family: 'Newsreader', serif;
+    font-size: 2.3rem;
+    font-weight: 500;
+    color: #fbfbfa;
+    margin-bottom: 0.6rem;
+    letter-spacing: -0.01em;
+}
+.claude-subtext {
+    font-size: 1.02rem;
+    color: #a1a1aa;
+    max-width: 560px;
+    margin: 0 auto 2.2rem auto;
     line-height: 1.6;
 }
 
-/* ── Suggestion Cards ── */
-.suggestion-card {
-    background: #1e222d;
+/* ── Claude Suggestion Cards ── */
+.claude-card {
+    background: #232328;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
-    padding: 1rem 1.1rem;
-    text-align: left;
+    padding: 1.1rem;
     transition: all 0.2s ease;
-    cursor: pointer;
-    min-height: 85px;
 }
-.suggestion-card:hover {
-    background: #262c3b;
-    border-color: #6366f1;
+.claude-card:hover {
+    background: #2a2a32;
+    border-color: #da7756;
     transform: translateY(-2px);
 }
-.suggestion-title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #ffffff;
-    margin-bottom: 0.25rem;
-}
-.suggestion-desc {
-    font-size: 0.8rem;
-    color: #94a3b8;
-}
 
-/* ── Chat Messages (Sleek ChatGPT bubbles) ── */
+/* ── Chat Messages ── */
 [data-testid="stChatMessage"] {
     background: transparent !important;
     border: none !important;
@@ -135,44 +143,45 @@ html, body, [class*="css"], .stApp {
     margin-bottom: 0.5rem !important;
 }
 
-/* User Bubble */
+/* User Message Bubble */
 [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
     display: flex;
     justify-content: flex-end;
 }
 [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) > div {
-    background: #2a2e3d !important;
+    background: #27272f !important;
     border-radius: 18px !important;
-    padding: 0.85rem 1.25rem !important;
+    padding: 0.9rem 1.3rem !important;
     max-width: 85%;
     border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-/* Assistant (Tutor) Bubble */
+/* Assistant (Claude) Bubble */
 [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) > div {
-    background: #171b24 !important;
+    background: #1f1f25 !important;
     border-radius: 18px !important;
-    padding: 1.2rem 1.5rem !important;
+    padding: 1.3rem 1.6rem !important;
     border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
 }
 
-/* Chat text visibility */
+/* Text Visibility */
 [data-testid="stChatMessage"] p,
 [data-testid="stChatMessage"] li,
 [data-testid="stChatMessage"] span,
 [data-testid="stChatMessage"] div {
-    color: #f1f5f9 !important;
-    font-size: 1.02rem !important;
-    line-height: 1.7 !important;
+    color: #f4f4f5 !important;
+    font-size: 1.03rem !important;
+    line-height: 1.75 !important;
 }
 [data-testid="stChatMessage"] strong {
-    color: #fbbf24 !important;
-    font-weight: 700 !important;
+    color: #e5987d !important;
+    font-weight: 700;
 }
 [data-testid="stChatMessage"] code {
-    background: #0f131a !important;
-    color: #38bdf8 !important;
+    background: #141416 !important;
+    color: #f59e0b !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     padding: 0.15rem 0.4rem !important;
     border-radius: 6px !important;
@@ -181,82 +190,127 @@ html, body, [class*="css"], .stApp {
 
 /* ── KaTeX Math Formula Highlight ── */
 .katex, .katex * {
-    color: #f8fafc !important;
-    font-size: 1.08em !important;
+    color: #fbfbfa !important;
+    font-size: 1.1em !important;
 }
 .katex-display {
-    background: rgba(99, 102, 241, 0.08) !important;
-    border-left: 3px solid #6366f1 !important;
+    background: rgba(218, 119, 86, 0.08) !important;
+    border-left: 3px solid #da7756 !important;
     border-radius: 8px !important;
-    padding: 0.6rem 0.9rem !important;
-    margin: 0.8rem 0 !important;
+    padding: 0.75rem 1rem !important;
+    margin: 0.85rem 0 !important;
 }
 
-/* ── Floating Chat Input Bar (Gemini / ChatGPT style) ── */
+/* ── Claude-Style Artifact Card (Created Files) ── */
+.artifact-card {
+    background: #1b1b22;
+    border: 1.5px solid rgba(218, 119, 86, 0.4);
+    border-radius: 14px;
+    padding: 1.2rem 1.4rem;
+    margin: 1rem 0;
+    box-shadow: 0 8px 25px rgba(218, 119, 86, 0.15);
+}
+.artifact-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fbfbfa;
+    margin-bottom: 0.35rem;
+}
+.artifact-desc {
+    font-size: 0.88rem;
+    color: #a1a1aa;
+    margin-bottom: 0.9rem;
+}
+
+/* ── Attached File Chip (Multi-File Access) ── */
+.file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(218, 119, 86, 0.14);
+    border: 1px solid rgba(218, 119, 86, 0.35);
+    border-radius: 10px;
+    padding: 0.4rem 0.85rem;
+    color: #fbfbfa;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+}
+
+/* ── Claude Floating Prompt Bar ── */
 [data-testid="stChatInput"] {
-    background: #1e222d !important;
-    border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+    background: #23232a !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.14) !important;
     border-radius: 20px !important;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
-    transition: all 0.2s ease;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45) !important;
+    transition: all 0.25s ease;
 }
 [data-testid="stChatInput"]:focus-within {
-    border-color: #6366f1 !important;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25) !important;
+    border-color: #da7756 !important;
+    box-shadow: 0 0 0 3px rgba(218, 119, 86, 0.3) !important;
 }
 [data-testid="stChatInput"] textarea {
     color: #ffffff !important;
-    font-size: 1rem !important;
+    font-size: 1.02rem !important;
 }
 [data-testid="stChatInput"] textarea::placeholder {
-    color: #94a3b8 !important;
+    color: #71717a !important;
 }
 
-/* ── Sidebar (ChatGPT style) ── */
+/* ── Sidebar (Claude Warm Dark) ── */
 [data-testid="stSidebar"] {
-    background-color: #12151c !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
+    background-color: #131316 !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 [data-testid="stSidebar"] * {
-    color: #cbd5e1 !important;
+    color: #d4d4d8 !important;
 }
 [data-testid="stSidebar"] h1,
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3 {
-    color: #ffffff !important;
+    color: #fbfbfa !important;
 }
 
-/* ── New Chat & Action Buttons ── */
+/* ── Claude Terracotta Buttons ── */
 .stButton > button {
-    background: #1e222d !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 12px !important;
+    background: #da7756 !important;
+    border: none !important;
+    border-radius: 10px !important;
     color: #ffffff !important;
     font-weight: 600 !important;
     font-size: 0.92rem !important;
+    padding: 0.55rem 1.1rem !important;
     transition: all 0.2s ease !important;
+    box-shadow: 0 4px 14px rgba(218, 119, 86, 0.3) !important;
 }
 .stButton > button:hover {
-    background: #2a2e3d !important;
-    border-color: #6366f1 !important;
+    background: #c86544 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(218, 119, 86, 0.45) !important;
+}
+
+/* Secondary Button in Sidebar */
+[data-testid="stSidebar"] .stButton > button {
+    background: #23232a !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #fbfbfa !important;
+    box-shadow: none !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: #2e2e38 !important;
+    border-color: #da7756 !important;
+}
+
+/* ── Download Button (Artifacts) ── */
+.stDownloadButton > button {
+    background: linear-gradient(135deg, #da7756 0%, #c86544 100%) !important;
+    border: none !important;
+    border-radius: 10px !important;
     color: #ffffff !important;
-}
-
-/* ── Summary card ── */
-.summary-card {
-    background: #172520;
-    border-left: 4px solid #10b981;
-    border-radius: 12px;
-    padding: 1.2rem;
-    margin-top: 1rem;
-    color: #d1fae5 !important;
-    font-size: 0.98rem;
-    line-height: 1.7;
-}
-
-/* ── File uploader dropzone inside chat bar ── */
-[data-testid="stFileUploader"] {
-    background: transparent !important;
+    font-weight: 700 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -291,6 +345,9 @@ if "gemini_history" not in st.session_state:
 if "class_level" not in st.session_state:
     st.session_state.class_level = 5
 
+if "artifacts" not in st.session_state:
+    st.session_state.artifacts = []  # List of {name, content, type}
+
 if "show_summary" not in st.session_state:
     st.session_state.show_summary = False
 
@@ -302,12 +359,13 @@ if "summary_text" not in st.session_state:
 # HELPER: Send to Tutor
 # ─────────────────────────────────────────────
 
-def add_message(role: str, content: str, image=None):
+def add_message(role: str, content: str, image=None, file_meta=None):
     """Save message for display and Gemini context."""
     st.session_state.messages.append({
         "role": role,
         "content": content,
         "image": image,
+        "file_meta": file_meta,
     })
     gemini_role = "model" if role == "assistant" else "user"
     st.session_state.gemini_history.append({
@@ -316,13 +374,13 @@ def add_message(role: str, content: str, image=None):
     })
 
 
-def send_to_tutor(user_text: str, image=None):
-    """Send question to Gemini, receive worked solution + practice challenge."""
-    add_message("user", user_text, image=image)
+def send_to_tutor(user_text: str, image=None, file_meta=None):
+    """Send user query to Gemini, receives worked solution + similar practice."""
+    add_message("user", user_text, image=image, file_meta=file_meta)
 
     system_prompt = get_system_prompt(st.session_state.class_level)
 
-    with st.spinner("Solving step-by-step & preparing practice challenge... 🧠"):
+    with st.spinner("Claude Tutor is thinking & drafting response... ✳️"):
         reply = get_gemini_response(
             api_key=api_key,
             system_prompt=system_prompt,
@@ -334,11 +392,11 @@ def send_to_tutor(user_text: str, image=None):
 
 
 # ─────────────────────────────────────────────
-# SIDEBAR (ChatGPT / Gemini style)
+# SIDEBAR (Claude Minimalist Theme)
 # ─────────────────────────────────────────────
 
 with st.sidebar:
-    st.markdown("### 📐 AI Math Tutor")
+    st.markdown("### ✳️ Claude Math Tutor")
 
     # + New Chat button
     if st.button("➕ New Chat", use_container_width=True):
@@ -351,7 +409,7 @@ with st.sidebar:
     st.markdown("---")
 
     # Class Selector
-    st.markdown("**🎓 Student Class**")
+    st.markdown("**🎓 Class Level**")
     new_class = st.selectbox(
         label="Select Class",
         options=list(range(1, 13)),
@@ -369,13 +427,63 @@ with st.sidebar:
 
     st.markdown("---")
 
+    # Claude Artifact Creator (File Creation Feature)
+    st.markdown("**📄 Create File (Artifacts)**")
+    st.caption("Generate printable worksheets, cheat sheets & study files.")
+    
+    with st.expander("✨ Create New File", expanded=False):
+        topic_input = st.text_input("Math Topic:", placeholder="e.g. Linear Equations, Fractions, Trigonometry")
+        art_type = st.selectbox(
+            "File Type:",
+            options=["worksheet", "cheat_sheet", "solution_set"],
+            format_func=lambda x: {
+                "worksheet": "📝 Practice Worksheet (.md)",
+                "cheat_sheet": "⚡ Formula Cheat Sheet (.md)",
+                "solution_set": "📘 Master Solved Set (.md)",
+            }[x],
+        )
+        if st.button("Generate & Download File", use_container_width=True):
+            if not topic_input.strip():
+                st.warning("Please enter a topic.")
+            elif key_error:
+                st.error(key_error)
+            else:
+                with st.spinner("Creating your file... 📄"):
+                    fname, fcontent = create_math_artifact(
+                        api_key=api_key,
+                        topic=topic_input.strip(),
+                        class_level=st.session_state.class_level,
+                        artifact_type=art_type,
+                    )
+                st.session_state.artifacts.append({"name": fname, "content": fcontent, "type": art_type})
+                send_to_tutor(
+                    f"I have created a new file for you: **{fname}** on topic '{topic_input}'. "
+                    "I am ready to guide you through any questions from it!"
+                )
+                st.rerun()
+
+    # Saved Artifacts List
+    if st.session_state.artifacts:
+        st.markdown("**📥 Generated Files:**")
+        for i, art in enumerate(st.session_state.artifacts):
+            st.download_button(
+                label=f"⬇️ {art['name']}",
+                data=art["content"],
+                file_name=art["name"],
+                mime="text/markdown",
+                key=f"dl_sidebar_art_{i}",
+                use_container_width=True,
+            )
+
+    st.markdown("---")
+
     # Parent Summary Button
-    st.markdown("**📋 Parent / Session Summary**")
-    if st.button("Generate Summary", use_container_width=True):
+    st.markdown("**📋 Parent Summary**")
+    if st.button("Generate Session Summary", use_container_width=True):
         if key_error:
             st.error(key_error)
         elif not st.session_state.messages:
-            st.warning("Chat with the tutor first to generate a summary.")
+            st.warning("Chat first to generate a summary.")
         else:
             system_prompt = get_system_prompt(st.session_state.class_level)
             with st.spinner("Generating summary..."):
@@ -389,21 +497,22 @@ with st.sidebar:
             st.rerun()
 
     st.markdown("---")
-    st.caption("✨ *Gives full step-by-step solutions first, then generates similar practice questions.*")
+    st.caption("✳️ *Supports all file formats (Images, PDFs, Text). Creates downloadable study files.*")
 
 
 # ─────────────────────────────────────────────
-# MAIN CHAT AREA
+# MAIN CHAT AREA (Claude Theme)
 # ─────────────────────────────────────────────
 
 # Header
 st.markdown(
     f"""
-    <div class="chat-header">
-        <div class="chat-header-title">
-            <span>📐 AI Math Tutor</span>
+    <div class="claude-header">
+        <div class="claude-brand">
+            <span class="claude-sparkle">✳️</span>
+            <span>Claude Math Tutor</span>
         </div>
-        <div class="chat-header-badge">Class {st.session_state.class_level}</div>
+        <div class="claude-badge">Class {st.session_state.class_level}</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -412,76 +521,121 @@ st.markdown(
 # API Key Error Check
 if key_error:
     st.error(f"🔑 **API Key Missing:** {key_error}")
-    st.info(
-        "Add `GEMINI_API_KEY` to your `.env` file locally or in Streamlit Cloud Secrets."
-    )
+    st.info("Add `GEMINI_API_KEY` to your `.env` file locally or in Streamlit Cloud Secrets.")
     st.stop()
 
-# ── Welcome Screen (shown when conversation is empty) ──
+# ── Claude Welcome Screen (shown when conversation is empty) ──
 if not st.session_state.messages:
     st.markdown(
         f"""
-        <div class="welcome-container">
-            <div class="welcome-hero-icon">✨</div>
-            <div class="welcome-title">What math problem are you working on?</div>
-            <div class="welcome-sub">
-                Type any math doubt or attach a photo from your textbook.
-                I will give you a <b>detailed step-by-step solution</b>, and then
-                give you a <b>similar practice problem</b> to test yourself!
+        <div class="claude-welcome">
+            <div class="claude-avatar-hero">✳️</div>
+            <div class="claude-greeting">How can I help you with math today?</div>
+            <div class="claude-subtext">
+                Ask any question, or attach <b>images, PDFs, or worksheets</b> below.
+                I will explain the complete step-by-step solution, and create a
+                <b>similar practice problem</b> for you to solve!
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # 4 Quick Suggestion Chips (like ChatGPT)
+    # 4 Claude Suggestion Cards
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🍕 Explain Fractions with simple examples", use_container_width=True):
+        if st.button("🍕 Explain Fractions with real-world examples", use_container_width=True):
             send_to_tutor(f"Explain fractions with simple real-life examples for Class {st.session_state.class_level}.")
             st.rerun()
 
-        if st.button("📐 Solve 2x + 7 = 19 step-by-step", use_container_width=True):
-            send_to_tutor("Solve 2x + 7 = 19 step-by-step and show the complete solution.")
+        if st.button("📐 Solve 3x + 12 = 45 with detailed steps", use_container_width=True):
+            send_to_tutor("Solve 3x + 12 = 45 with complete step-by-step working and a similar practice problem.")
             st.rerun()
 
     with col2:
-        if st.button(f"🎲 Give me a Class {st.session_state.class_level} challenge", use_container_width=True):
-            send_to_tutor(f"Give me an interesting math problem suitable for Class {st.session_state.class_level}, solve it with full steps, and give me a similar practice problem.")
+        if st.button("📄 Generate a Practice Worksheet file for me", use_container_width=True):
+            with st.spinner("Generating Practice Worksheet artifact..."):
+                fname, fcontent = create_math_artifact(
+                    api_key=api_key,
+                    topic="Fractions and Decimals" if st.session_state.class_level <= 6 else "Linear Equations",
+                    class_level=st.session_state.class_level,
+                    artifact_type="worksheet",
+                )
+            st.session_state.artifacts.append({"name": fname, "content": fcontent, "type": "worksheet"})
+            send_to_tutor(
+                f"I generated a practice worksheet file for you: **{fname}**! "
+                "Download it from the sidebar or click the download button. Let's solve the first question together!"
+            )
             st.rerun()
 
-        if st.button("📷 How do I scan / upload my textbook problem?", use_container_width=True):
-            send_to_tutor("How can I upload a photo of my math problem? Explain how you will solve it and help me practice.")
+        if st.button("📎 What file formats can I attach?", use_container_width=True):
+            send_to_tutor(
+                "What file formats can I upload here? Explain how you can read photos, PDFs, textbooks, and homework notes."
+            )
             st.rerun()
 
 # ── Render Chat History ──
 for msg in st.session_state.messages:
     with st.chat_message(
         name=msg["role"],
-        avatar="🧑‍🎓" if msg["role"] == "user" else "✨",
+        avatar="🧑‍🎓" if msg["role"] == "user" else "✳️",
     ):
+        # If a file was attached in this message, display attachment card
+        if msg.get("file_meta"):
+            f_meta = msg["file_meta"]
+            st.markdown(
+                f'<div class="file-chip">📎 Attached File: <b>{f_meta["name"]}</b> ({f_meta["type"]})</div>',
+                unsafe_allow_html=True,
+            )
         if msg.get("image"):
-            st.image(msg["image"], caption="📷 Scanned Question Photo", width=340)
+            st.image(msg["image"], caption="📷 Attached Problem Image", width=340)
+
         st.markdown(msg["content"])
+
+# ── Display Generated Artifacts (Downloadable Files like Claude) ──
+if st.session_state.artifacts:
+    latest_art = st.session_state.artifacts[-1]
+    st.markdown(
+        f"""
+        <div class="artifact-card">
+            <div class="artifact-header">
+                <span>📄 Created File (Artifact):</span>
+                <span>{latest_art['name']}</span>
+            </div>
+            <div class="artifact-desc">
+                Generated custom math file for Class {st.session_state.class_level}. Click below to save it to your device.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.download_button(
+        label=f"⬇️ Download {latest_art['name']}",
+        data=latest_art["content"],
+        file_name=latest_art["name"],
+        mime="text/markdown",
+        key="main_artifact_dl_btn",
+        use_container_width=True,
+    )
 
 # ── Parent Summary Display ──
 if st.session_state.show_summary and st.session_state.summary_text:
     st.markdown("---")
     st.markdown("### 📋 Parent Session Summary")
     st.markdown(
-        f'<div class="summary-card">{st.session_state.summary_text}</div>',
+        f'<div class="artifact-card" style="border-color: #10b981;">{st.session_state.summary_text}</div>',
         unsafe_allow_html=True,
     )
 
-# ── Chat Input Bar (with native file/camera upload like ChatGPT) ──
+# ── Claude Floating Chat Bar with Multi-File Upload ──
+# Accepts Images (PNG, JPG, WEBP), PDFs, Text files, Worksheets, Code
 chat_val = st.chat_input(
-    placeholder=f"Ask any Class {st.session_state.class_level} math doubt or attach a photo...",
+    placeholder=f"Ask any math doubt or attach photos, PDFs, worksheets...",
     accept_file=True,
-    file_type=["png", "jpg", "jpeg", "webp"],
+    file_type=["png", "jpg", "jpeg", "webp", "pdf", "txt", "md", "csv", "py"],
 )
 
 if chat_val:
-    # Extract text and files from ChatInputValue
     user_text = ""
     uploaded_files = []
 
@@ -493,40 +647,43 @@ if chat_val:
     if hasattr(chat_val, "files") and chat_val.files:
         uploaded_files = chat_val.files
 
-    # Process image if attached
+    # Multi-file processing: Images, PDFs, Text files
     if uploaded_files:
-        img_file = uploaded_files[0]
-        image_bytes = img_file.read()
-        mime_type = img_file.type or "image/jpeg"
+        attached_file = uploaded_files[0]
+        file_bytes = attached_file.read()
+        file_name = attached_file.name
+        mime_type = attached_file.type or ""
+        ext = file_name.lower().split(".")[-1] if "." in file_name else ""
 
-        with st.spinner("🔍 Reading math problem from image using Gemini Vision..."):
-            extracted = extract_math_from_image(
+        with st.spinner(f"Reading and scanning {file_name}... 📄"):
+            extracted_text = extract_content_from_file(
                 api_key=api_key,
-                image_bytes=image_bytes,
+                file_bytes=file_bytes,
+                file_name=file_name,
                 mime_type=mime_type,
             )
 
-        if extracted.startswith(("API limit", "Could not", "Image reading")):
-            st.error(extracted)
-        elif "No math problem found" in extracted:
-            st.warning("⚠️ No math problem detected in the image. Please try a clearer photo.")
-        else:
-            if user_text:
-                full_prompt = (
-                    f"{user_text}\n\n"
-                    f"**Problem from uploaded photo:**\n{extracted}\n\n"
-                    f"Please provide the detailed step-by-step solution first, "
-                    f"and then create a similar practice problem for me!"
-                )
-            else:
-                full_prompt = (
-                    f"I uploaded a photo of this math problem:\n**{extracted}**\n\n"
-                    f"Please provide the detailed step-by-step solution first, "
-                    f"and then create a similar practice problem for me!"
-                )
+        is_image = ext in ["png", "jpg", "jpeg", "webp", "bmp"]
+        img_payload = file_bytes if is_image else None
+        file_meta = {"name": file_name, "type": ext.upper() or "Document"}
 
-            send_to_tutor(full_prompt, image=image_bytes)
-            st.rerun()
+        if user_text:
+            full_prompt = (
+                f"{user_text}\n\n"
+                f"**Extracted Content from '{file_name}':**\n{extracted_text}\n\n"
+                f"Please provide the detailed step-by-step solution first, "
+                f"and then create a similar practice problem for me!"
+            )
+        else:
+            full_prompt = (
+                f"I attached a file: **{file_name}**\n\n"
+                f"**Extracted Math Problem(s):**\n{extracted_text}\n\n"
+                f"Please provide the detailed step-by-step solution first, "
+                f"and then create a similar practice problem for me!"
+            )
+
+        send_to_tutor(full_prompt, image=img_payload, file_meta=file_meta)
+        st.rerun()
 
     elif user_text:
         send_to_tutor(user_text)
