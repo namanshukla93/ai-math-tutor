@@ -1,0 +1,7 @@
+# requirements.txt — all Python packages needed to run this project
+#
+# Install them all at once with:  pip install -r requirements.txt
+
+streamlit>=1.35.0     # Builds the web app UI
+google-genai>=1.0.0   # Official Google Gemini API client (new SDK, replaces google-generativeai)
+python-dotenv>=1.0.0  # Loads the .env file so our API key is available

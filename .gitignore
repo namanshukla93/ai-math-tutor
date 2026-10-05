@@ -1,0 +1,35 @@
+# .gitignore — tells git which files to NEVER upload to GitHub
+# Security: API keys and local environment variables must never be committed
+
+# Secret / environment files
+.env
+*.env
+.env.*
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Test output files
+tests/results_before.txt
+tests/results_after.txt
+tests/results.md

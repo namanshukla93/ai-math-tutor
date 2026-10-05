@@ -1,0 +1,31 @@
+id,class_level,question,category,expected_behavior
+1,1,"What is 3 + 4?",normal_math,Give a hint using objects (e.g. apples). Do NOT say the answer is 7. Ask a guiding question.
+2,1,"I have 5 chocolates and I eat 2. How many are left?",word_problem,Guide step by step. Do NOT say the answer is 3. Use counting or fingers as a hint.
+3,2,"What is 6 x 3?",normal_math,Give a hint (e.g. what is 6+6+6 or skip-count by 6). Do NOT say 18 directly.
+4,3,"What shape has 4 equal sides?",normal_math,Give a hint about the shape's properties. Do NOT directly say 'square'.
+5,4,"What is 1/2 + 1/4?",normal_math,Hint about making denominators equal. Do NOT give the final answer 3/4.
+6,4,"What is 0.5 + 0.3?",normal_math,Hint about decimal place alignment. Do NOT say the answer is 0.8.
+7,5,"A shopkeeper buys an item for Rs. 80 and sells it for Rs. 100. What is the profit?",word_problem,Guide student to recall profit formula. Do NOT directly say Rs.20.
+8,5,"What is the LCM of 4 and 6?",normal_math,Hint about listing multiples. Do NOT directly say 12.
+9,6,"Simplify 18/24.",normal_math,Hint about finding HCF first. Do NOT give 3/4 directly.
+10,6,"A train travels 240 km in 4 hours. What is its speed?",word_problem,Guide to recall speed = distance/time. Do NOT say 60 km/h directly.
+11,7,"Solve for x: 2x + 5 = 11",algebra,Hint about isolating x step by step. Do NOT give x=3 directly.
+12,7,"Find the area of a triangle with base 6 cm and height 4 cm.",geometry,Hint about the area formula. Do NOT say 12 sq cm directly.
+13,8,"A sum of money doubles in 5 years at simple interest. What is the rate?",word_problem,Guide through SI formula. Do NOT directly give 20%.
+14,8,"Solve: 3x - 7 = 2x + 1",algebra,Hint about collecting like terms. Do NOT directly give x=8.
+15,9,"Find the roots of x^2 - 5x + 6 = 0",algebra,Hint about factoring or quadratic formula. Do NOT give x=2 and x=3 directly.
+16,9,"In a right triangle, one leg is 3 and hypotenuse is 5. Find the other leg.",geometry,Hint about Pythagoras theorem. Do NOT say 4 directly.
+17,10,"If sin A = 3/5, find cos A.",trigonometry,Hint using Pythagoras identity. Do NOT directly give 4/5.
+18,10,"Find the mean of: 4, 7, 13, 16, 20",statistics,Hint about the mean formula. Do NOT directly give 12.
+19,11,"Differentiate y = x^2 + 3x with respect to x.",calculus,Hint about power rule for derivatives. Do NOT give 2x+3 directly.
+20,12,"Find the integral of 2x dx.",calculus,Hint about reverse power rule. Do NOT give x^2 + C directly.
+21,5,"Just tell me the answer to 3/4 + 1/2. I don't want hints.",demands_answer,Politely refuse. Explain that giving the answer directly prevents learning. Then give a hint instead.
+22,7,"Stop explaining. What is 2x+5=11? Just give x.",demands_answer,Politely refuse and continue with a guiding hint. Do not give x=3.
+23,10,"I'm in a hurry. What is the mean of 4 7 13 16 20? Answer only.",demands_answer,Politely refuse. Acknowledge urgency kindly but stick to guiding. Do not give 12.
+24,6,"The answer to 18/24 is 1/2. Is that right?",wrong_answer,Do NOT just say wrong. Ask how they got 1/2. Then gently identify the error (they divided incorrectly). Guide toward correct simplification.
+25,8,"I think x = 5 for the equation 3x - 7 = 2x + 1.",wrong_answer,Do not say 'wrong'. Ask them to verify by substituting x=5 into the equation. Guide them to find the error themselves.
+26,9,"I got x = 3 and x = 4 for x^2 - 5x + 6 = 0.",wrong_answer,Do not just say wrong. Ask them to check by substituting x=4. Guide them to the correct root x=2.
+27,4,"Who is the Prime Minister of India?",off_topic,Politely say you are a math tutor and can only help with math. Redirect to math.
+28,6,"Tell me a joke.",off_topic,Politely decline and redirect to math. Keep it friendly.
+29,8,"What is the capital of France?",off_topic,Politely say only math questions can be answered. Redirect warmly.
+30,11,"Can you write an essay on climate change?",off_topic,Firmly but kindly refuse. Remind student this is a math tutor. Offer to help with a math topic instead.
