@@ -135,6 +135,32 @@ if "show_summary" not in st.session_state:
 if "summary_text" not in st.session_state:
     st.session_state.summary_text = ""
 
+# Claude Settings Modal State
+if "open_settings" not in st.session_state:
+    st.session_state.open_settings = False
+
+if "settings_tab" not in st.session_state:
+    st.session_state.settings_tab = "General"
+
+if "settings_theme" not in st.session_state:
+    st.session_state.settings_theme = "🌙 Dark"
+
+if "transcript_width" not in st.session_state:
+    st.session_state.transcript_width = "Medium"
+
+if "motion_setting" not in st.session_state:
+    st.session_state.motion_setting = "System"
+
+if "voice_lang" not in st.session_state:
+    st.session_state.voice_lang = "English"
+
+if "voice_style" not in st.session_state:
+    st.session_state.voice_style = "Buttery"
+
+if "voice_speed" not in st.session_state:
+    st.session_state.voice_speed = "Normal"
+
+
 
 # ─────────────────────────────────────────────
 # DYNAMIC FONT & BESPOKE LUXURY DARK CSS
@@ -531,6 +557,60 @@ div[data-testid="column"] .stButton > button:hover {{
     color: #FFFFFF !important;
     font-weight: 700 !important;
 }}
+
+/* ── Claude Settings Modal Dialog ── */
+div[data-testid="stDialog"] > div {{
+    background-color: #18181A !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 18px !important;
+    color: #ECE6DD !important;
+    max-width: 860px !important;
+    padding: 1.5rem !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7) !important;
+}}
+div[data-testid="stDialog"] h2 {{
+    color: #ECE6DD !important;
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    padding-bottom: 0.7rem !important;
+    margin-bottom: 1rem !important;
+}}
+div[data-testid="stDialog"] button[aria-label="Close"] {{
+    color: #9C978D !important;
+}}
+div[data-testid="stDialog"] button[aria-label="Close"]:hover {{
+    color: #ECE6DD !important;
+}}
+
+/* Modal Sidebar Search Box */
+div[data-testid="stDialog"] input {{
+    background-color: #141312 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    color: #ECE6DD !important;
+    font-size: 0.88rem !important;
+}}
+
+/* Modal Segmented Controls */
+[data-testid="stSegmentedControl"] {{
+    background: #1C1B19 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+    padding: 3px !important;
+}}
+[data-testid="stSegmentedControl"] button {{
+    border-radius: 7px !important;
+    color: #9C978D !important;
+    font-size: 0.84rem !important;
+    padding: 4px 12px !important;
+    border: none !important;
+}}
+[data-testid="stSegmentedControl"] button[aria-checked="true"] {{
+    background: #2E2C28 !important;
+    color: #ECE6DD !important;
+    font-weight: 600 !important;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -769,12 +849,302 @@ if st.session_state.is_logged_in and (not st.session_state.chat_sessions or not 
 
 
 # ─────────────────────────────────────────────
-# SIDEBAR NAVIGATION & PROFILE SETTINGS
+# CLAUDE SETTINGS MODAL DIALOG
 # ─────────────────────────────────────────────
+
+@st.dialog("Settings", width="large")
+def render_settings_dialog():
+    uid = st.session_state.get("user_id", 1)
+    col_modal_l, col_modal_r = st.columns([1.1, 2.7])
+
+    with col_modal_l:
+        search_query = st.text_input(
+            "Search",
+            placeholder="🔍 Search",
+            label_visibility="collapsed",
+            key="dlg_search_input",
+        ).strip().lower()
+
+        st.markdown(
+            "<div style='font-size: 0.74rem; font-weight: 600; color: #787570; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 6px; margin-bottom: 6px;'>Settings</div>",
+            unsafe_allow_html=True,
+        )
+
+        settings_nav = [
+            ("⚙️ General", "General"),
+            ("👤 Account", "Account"),
+            ("🛡️ Privacy", "Privacy"),
+            ("💳 Billing", "Billing"),
+            ("💼 Capabilities", "Capabilities"),
+            ("🔄 Memory", "Memory"),
+            ("🪞 Reflect", "Reflect"),
+            ("🌙 Time and focus", "Time and focus"),
+            ("💻 Claude Code", "Claude Code"),
+        ]
+
+        for label, val in settings_nav:
+            if not search_query or search_query in val.lower() or search_query in label.lower():
+                is_active = (st.session_state.settings_tab == val)
+                btn_display = f"👉 **{val}**" if is_active else label
+                if st.button(btn_display, key=f"dlg_tab_btn_{val}", use_container_width=True):
+                    st.session_state.settings_tab = val
+                    st.rerun()
+
+        st.markdown(
+            "<div style='font-size: 0.74rem; font-weight: 600; color: #787570; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 14px; margin-bottom: 6px;'>Customize</div>",
+            unsafe_allow_html=True,
+        )
+
+        customize_nav = [
+            ("📑 Skills", "Skills"),
+            ("🪢 Connectors", "Connectors"),
+            ("🧩 Plugins", "Plugins"),
+        ]
+
+        for label, val in customize_nav:
+            if not search_query or search_query in val.lower() or search_query in label.lower():
+                is_active = (st.session_state.settings_tab == val)
+                btn_display = f"👉 **{val}**" if is_active else label
+                if st.button(btn_display, key=f"dlg_tab_btn_{val}", use_container_width=True):
+                    st.session_state.settings_tab = val
+                    st.rerun()
+
+    with col_modal_r:
+        cur_tab = st.session_state.get("settings_tab", "General")
+
+        if cur_tab == "General":
+            # ── SECTION: Appearance ──
+            st.markdown("<h3 style='margin: 0 0 1.2rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Appearance</h3>", unsafe_allow_html=True)
+
+            # Theme
+            col_t_l, col_t_r = st.columns([1.3, 1.7])
+            with col_t_l:
+                st.markdown("<div style='padding-top: 6px; font-weight: 500; color: #ECE6DD;'>Theme</div>", unsafe_allow_html=True)
+            with col_t_r:
+                theme_val = st.segmented_control(
+                    "Theme",
+                    options=["💻 System", "☀️ Light", "🌙 Dark"],
+                    default=st.session_state.get("settings_theme", "🌙 Dark"),
+                    key="modal_theme_choice",
+                    label_visibility="collapsed",
+                )
+                if theme_val and theme_val != st.session_state.settings_theme:
+                    st.session_state.settings_theme = theme_val
+
+            st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+
+            # Chat Font
+            col_f_l, col_f_r = st.columns([1.3, 1.7])
+            with col_f_l:
+                st.markdown("<div style='padding-top: 6px; font-weight: 500; color: #ECE6DD;'>Chat font</div>", unsafe_allow_html=True)
+            with col_f_r:
+                font_display_map = {
+                    "Anthropic Serif": "Classic Editorial",
+                    "Modern Sans": "Modern Sans",
+                    "Clean Mono": "Clean Mono",
+                }
+                reverse_map = {"Classic Editorial": "Anthropic Serif", "Modern Sans": "Modern Sans", "Clean Mono": "Clean Mono"}
+                current_display = reverse_map.get(st.session_state.font_style, "Anthropic Serif")
+                sel_f = st.selectbox(
+                    "Chat font",
+                    options=["Anthropic Serif", "Modern Sans", "Clean Mono"],
+                    index=["Anthropic Serif", "Modern Sans", "Clean Mono"].index(current_display),
+                    key="modal_font_select",
+                    label_visibility="collapsed",
+                )
+                actual_font = font_display_map.get(sel_f, "Classic Editorial")
+                if actual_font != st.session_state.font_style:
+                    st.session_state.font_style = actual_font
+                    st.rerun()
+
+            st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+
+            # Transcript Width
+            col_w_l, col_w_r = st.columns([1.3, 1.7])
+            with col_w_l:
+                st.markdown("<div><b style='color: #ECE6DD;'>Transcript width</b><div style='color: #787570; font-size: 0.78rem;'>Maximum width of the transcript and composer columns.</div></div>", unsafe_allow_html=True)
+            with col_w_r:
+                w_val = st.segmented_control(
+                    "Transcript width",
+                    options=["Narrow", "Medium", "Wide"],
+                    default=st.session_state.get("transcript_width", "Medium"),
+                    key="modal_width_choice",
+                    label_visibility="collapsed",
+                )
+                if w_val and w_val != st.session_state.transcript_width:
+                    st.session_state.transcript_width = w_val
+
+            st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+
+            # Motion
+            col_m_l, col_m_r = st.columns([1.3, 1.7])
+            with col_m_l:
+                st.markdown("<div><b style='color: #ECE6DD;'>Motion</b><div style='color: #787570; font-size: 0.78rem;'>Reduce animation in streaming responses and other interface elements.</div></div>", unsafe_allow_html=True)
+            with col_m_r:
+                m_val = st.segmented_control(
+                    "Motion",
+                    options=["System", "Reduced"],
+                    default=st.session_state.get("motion_setting", "System"),
+                    key="modal_motion_choice",
+                    label_visibility="collapsed",
+                )
+                if m_val and m_val != st.session_state.motion_setting:
+                    st.session_state.motion_setting = m_val
+
+            st.markdown("<hr style='border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 1.6rem 0;'>", unsafe_allow_html=True)
+
+            # ── SECTION: Voice ──
+            st.markdown("<h3 style='margin: 0 0 1.2rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Voice</h3>", unsafe_allow_html=True)
+
+            col_v1_l, col_v1_r = st.columns([1.3, 1.7])
+            with col_v1_l:
+                st.markdown("<div style='padding-top: 6px; font-weight: 500; color: #ECE6DD;'>Language</div>", unsafe_allow_html=True)
+            with col_v1_r:
+                v_lang = st.selectbox(
+                    "Voice Language",
+                    options=["English", "Hindi", "Spanish", "French", "German"],
+                    index=["English", "Hindi", "Spanish", "French", "German"].index(st.session_state.get("voice_lang", "English")),
+                    key="modal_voice_lang",
+                    label_visibility="collapsed",
+                )
+                if v_lang != st.session_state.voice_lang:
+                    st.session_state.voice_lang = v_lang
+
+            st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+
+            col_v2_l, col_v2_r = st.columns([1.3, 1.7])
+            with col_v2_l:
+                st.markdown("<div style='padding-top: 6px; font-weight: 500; color: #ECE6DD;'>Style</div>", unsafe_allow_html=True)
+            with col_v2_r:
+                v_style = st.selectbox(
+                    "Voice Style",
+                    options=["Buttery", "Natural", "Calm", "Crisp"],
+                    index=["Buttery", "Natural", "Calm", "Crisp"].index(st.session_state.get("voice_style", "Buttery")),
+                    key="modal_voice_style",
+                    label_visibility="collapsed",
+                )
+                if v_style != st.session_state.voice_style:
+                    st.session_state.voice_style = v_style
+
+            st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+
+            col_v3_l, col_v3_r = st.columns([1.3, 1.7])
+            with col_v3_l:
+                st.markdown("<div style='padding-top: 6px; font-weight: 500; color: #ECE6DD;'>Speed</div>", unsafe_allow_html=True)
+            with col_v3_r:
+                v_spd = st.selectbox(
+                    "Voice Speed",
+                    options=["Normal", "Slow", "Fast"],
+                    index=["Normal", "Slow", "Fast"].index(st.session_state.get("voice_speed", "Normal")),
+                    key="modal_voice_speed",
+                    label_visibility="collapsed",
+                )
+                if v_spd != st.session_state.voice_speed:
+                    st.session_state.voice_speed = v_spd
+
+        elif cur_tab == "Account":
+            st.markdown("<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Account & Profile</h3>", unsafe_allow_html=True)
+            user_info = get_user_details(uid) if uid else {}
+            st.caption(f"Email: **{st.session_state.user_email}** &nbsp;•&nbsp; Member Since: **{user_info.get('created_at', 'October 2026')}**")
+
+            with st.form("modal_edit_profile_form"):
+                new_name_val = st.text_input("Full Name:", value=st.session_state.user_name)
+                new_class_val = st.selectbox(
+                    "Academic Class Level:",
+                    options=list(range(1, 13)),
+                    index=st.session_state.class_level - 1,
+                    format_func=lambda x: f"Class {x}",
+                )
+                save_prof_btn = st.form_submit_button("Save Profile", type="primary", use_container_width=True)
+                if save_prof_btn:
+                    if new_name_val.strip():
+                        ok_u, msg_u = update_user_profile(uid, new_name_val.strip(), new_class_val)
+                        if ok_u:
+                            st.session_state.user_name = new_name_val.strip()
+                            st.session_state.class_level = new_class_val
+                            st.success("✅ Profile updated!")
+                            st.rerun()
+                        else:
+                            st.error(msg_u)
+
+            st.markdown("<hr style='border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 1.2rem 0;'>", unsafe_allow_html=True)
+            st.markdown("<b style='color: #ECE6DD;'>Security: Change Password</b>", unsafe_allow_html=True)
+            with st.form("modal_pwd_form"):
+                curr_p = st.text_input("Current Password:", type="password")
+                new_p = st.text_input("New Password:", type="password")
+                conf_p = st.text_input("Confirm New Password:", type="password")
+                chg_btn = st.form_submit_button("Update Password", use_container_width=True)
+                if chg_btn:
+                    if len(new_p) < 6:
+                        st.error("Password must be at least 6 characters.")
+                    elif new_p != conf_p:
+                        st.error("New passwords do not match.")
+                    else:
+                        ok_w, msg_w = change_user_password(uid, curr_p, new_p)
+                        if ok_w:
+                            st.success("✅ Password updated successfully!")
+                        else:
+                            st.error(f"❌ {msg_w}")
+
+        elif cur_tab == "Time and focus":
+            st.markdown("<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Time and Focus</h3>", unsafe_allow_html=True)
+            elapsed_mins = int((time.time() - st.session_state.session_start_time) / 60)
+            st.markdown(f"<div style='background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.8rem 1rem; margin-bottom: 1.2rem;'>⏱️ Current Study Session Duration: <b>{elapsed_mins} minutes</b></div>", unsafe_allow_html=True)
+            
+            f_val = st.toggle("Focus Mode (Distraction-Free Minimalist UI)", value=st.session_state.focus_mode, key="modal_focus_tog")
+            if f_val != st.session_state.focus_mode:
+                st.session_state.focus_mode = f_val
+                st.rerun()
+
+            n_val = st.toggle("Notifications when math problems are solved", value=st.session_state.notify_solved, key="modal_notif_tog")
+            if n_val != st.session_state.notify_solved:
+                st.session_state.notify_solved = n_val
+                st.rerun()
+
+        elif cur_tab == "Billing":
+            st.markdown("<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Billing & Plans</h3>", unsafe_allow_html=True)
+            st.markdown(
+                """
+                <div style="background: rgba(217, 119, 87, 0.08); border: 1px solid rgba(217, 119, 87, 0.35); border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 700; color: #ECE6DD; font-size: 1.1rem;">Free Plan</div>
+                            <div style="color: #9C978D; font-size: 0.85rem; margin-top: 4px;">Unlimited basic step-by-step problem solving & conceptual explanations.</div>
+                        </div>
+                        <span style="background: #2E2C28; border: 1px solid rgba(255,255,255,0.12); color: #ECE6DD; font-size: 0.8rem; padding: 4px 10px; border-radius: 9999px; font-weight: 600;">Active</span>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.caption("Need priority quota, advanced voice mode, or custom curriculum worksheets? Upgrade to **AI Tutor Pro**.")
+
+        elif cur_tab == "Capabilities":
+            st.markdown("<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Model Capabilities</h3>", unsafe_allow_html=True)
+            st.markdown(
+                """
+                - 🚀 **AI Tutor 2.5 Flash Model**: High-speed, accurate multi-step mathematical derivation.
+                - 📐 **KaTeX Mathematical Rendering**: Full LaTeX display for complex equations, integrals, matrices, fractions.
+                - 📄 **Multimodal File Scanner**: Direct OCR and analysis for homework photos, textbook PDFs, practice worksheets, and Python scripts.
+                - 💾 **SQLite Local History**: Salted bcrypt security with permanent session persistence.
+                """
+            )
+
+        else:
+            st.markdown(f"<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>{cur_tab}</h3>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color: #9C978D;'>Configurations and integrations for <b>{cur_tab}</b> are active and connected to your AI Tutor workspace.</p>", unsafe_allow_html=True)
+
+
+# Auto-open settings dialog when triggered
+if st.session_state.get("open_settings", False):
+    st.session_state.open_settings = False
+    render_settings_dialog()
+
 
 # ─────────────────────────────────────────────
 # SIDEBAR NAVIGATION & CLAUDE LEFT PANEL
 # ─────────────────────────────────────────────
+
 
 with st.sidebar:
     # 1. Header with Asterism Starburst Logo
@@ -891,13 +1261,21 @@ with st.sidebar:
     st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
     with st.popover(f"👤 {initial}   {first_name} · Free  ▾", use_container_width=True):
         st.markdown(
-            f"<div style='font-size: 0.82rem; color: #8E8B85; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.08);'>{st.session_state.user_email}</div>",
+            f"<div style='font-size: 0.82rem; color: #8E8B85; padding-bottom: 0.5rem; margin-bottom: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.08);'>{st.session_state.user_email}</div>",
             unsafe_allow_html=True,
         )
+
+        col_set_b, col_set_k = st.columns([3.5, 1.5])
+        with col_set_b:
+            if st.button("⚙️ Settings", key="pop_btn_open_settings", use_container_width=True):
+                st.session_state.open_settings = True
+                st.rerun()
+        with col_set_k:
+            st.markdown("<div style='padding-top: 7px; text-align: right; color: #787570; font-size: 0.74rem;'>Ctrl+Shift+,</div>", unsafe_allow_html=True)
+
         st.markdown(
             """
-            <div style="padding: 0.5rem 0; font-size: 0.88rem; line-height: 2.1; color: #ECE6DD;">
-                <div>⚙️ <b>Settings</b> &nbsp; <span style='color: #787570; font-size: 0.78rem;'>Ctrl+Shift+,</span></div>
+            <div style="padding: 0.3rem 0; font-size: 0.88rem; line-height: 2.2; color: #ECE6DD;">
                 <div>🌐 <b>Language:</b> English</div>
                 <div>❓ <b>Get help</b></div>
                 <div>⬆️ <b>Upgrade plan</b></div>
@@ -910,57 +1288,16 @@ with st.sidebar:
 
         st.divider()
 
-        # Preferences Controls Inside Popover
-        st.markdown("<b style='color: #ECE6DD; font-size: 0.85rem;'>Reading & Study Preferences</b>", unsafe_allow_html=True)
-        selected_font = st.selectbox(
-            "Reading Font:",
-            options=["Modern Sans", "Classic Editorial", "Clean Mono"],
-            index=["Modern Sans", "Classic Editorial", "Clean Mono"].index(st.session_state.font_style),
-            key="pop_font_sel",
-        )
-        if selected_font != st.session_state.font_style:
-            st.session_state.font_style = selected_font
+        if st.button("🚪 Log out", key="pop_logout_btn", use_container_width=True):
+            st.session_state.is_logged_in = False
+            st.session_state.user_name = ""
+            st.session_state.user_email = ""
+            st.session_state.user_id = None
+            st.session_state.messages = []
+            st.session_state.gemini_history = []
+            st.session_state.chat_sessions = {}
             st.rerun()
 
-        new_class = st.selectbox(
-            "Academic Grade:",
-            options=list(range(1, 13)),
-            index=st.session_state.class_level - 1,
-            format_func=lambda x: f"Class {x}",
-            key="pop_class_sel",
-        )
-        if new_class != st.session_state.class_level:
-            st.session_state.class_level = new_class
-            update_user_profile(uid, st.session_state.user_name, new_class)
-            st.rerun()
-
-        notif_val = st.toggle("Notify when problem solved", value=st.session_state.notify_solved, key="pop_notif_tog")
-        if notif_val != st.session_state.notify_solved:
-            st.session_state.notify_solved = notif_val
-            st.rerun()
-
-        focus_val = st.toggle("Focus Mode (Distraction-Free)", value=st.session_state.focus_mode, key="pop_focus_tog")
-        if focus_val != st.session_state.focus_mode:
-            st.session_state.focus_mode = focus_val
-            st.rerun()
-
-        st.divider()
-
-        col_pa, col_pl = st.columns(2)
-        with col_pa:
-            if st.button("👤 Account", key="pop_acc_btn", use_container_width=True):
-                st.session_state.active_nav = "👤 Account Details"
-                st.rerun()
-        with col_pl:
-            if st.button("🚪 Log out", key="pop_logout_btn", use_container_width=True):
-                st.session_state.is_logged_in = False
-                st.session_state.user_name = ""
-                st.session_state.user_email = ""
-                st.session_state.user_id = None
-                st.session_state.messages = []
-                st.session_state.gemini_history = []
-                st.session_state.chat_sessions = {}
-                st.rerun()
 
 
 # ─────────────────────────────────────────────
