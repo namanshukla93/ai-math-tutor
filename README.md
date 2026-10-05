@@ -6,6 +6,7 @@
 [![Streamlit](https://img.shields.io/badge/UI-Streamlit-red.svg)](https://streamlit.io/)
 [![Google Gemini](https://img.shields.io/badge/AI-Google%20Gemini-orange.svg)](https://ai.google.dev/)
 [![SQLite](https://img.shields.io/badge/Database-SQLite%203-lightgrey.svg)](https://sqlite.org/)
+[![Deploy with Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
@@ -85,6 +86,24 @@ GEMINI_API_KEY=your_actual_gemini_api_key_here
 streamlit run app.py
 ```
 Open your browser at `http://localhost:8501`.
+
+---
+
+## 🌐 1-Click Free Cloud Deployment (Streamlit Community Cloud)
+
+You can host ApexSolve live online 24/7 for free using **Streamlit Community Cloud**:
+
+1. Fork or push this repository to your GitHub account (`namanshukla93/ai-math-tutor`).
+2. Go to **[share.streamlit.io](https://share.streamlit.io)** and log in with GitHub.
+3. Click **"New app"** and fill in:
+   - **Repository:** `namanshukla93/ai-math-tutor`
+   - **Branch:** `main`
+   - **Main file path:** `app.py`
+4. Expand **Advanced settings...** ➡️ **Secrets**, and enter:
+   ```toml
+   GEMINI_API_KEY = "your_actual_gemini_api_key_here"
+   ```
+5. Click **Deploy!** — In less than 2 minutes, your live web app URL (e.g., `https://apexsolve.streamlit.app`) will be active worldwide!
 
 ---
 
