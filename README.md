@@ -31,13 +31,14 @@ Students of **Class 1 through Class 12** — covering topics from basic counting
 
 | Feature | Description |
 |---|---|
-| 🌐 **Live Web App** | 24/7 accessible on any phone or laptop at [ai-math-tutor-bynamanshukla.streamlit.app](https://ai-math-tutor-bynamanshukla.streamlit.app/) |
-| 🎓 **Class Selector** | Choose Class 1 to 12 — tutor adjusts vocabulary, examples, and CBSE/NCERT curriculum difficulty |
-| 📷 **Scan & Attach Photos** | Attach photos of textbook or notebook questions directly in the chat bar (Gemini Vision) |
-| 📝 **Detailed Worked Solutions** | Clear, step-by-step conceptual walkthroughs showing every calculation |
-| 🎯 **Auto Similar Practice** | Tutor automatically creates a similar practice question for self-testing |
+| 🌐 **Live Web App** | 24/7 accessible on any device at [ai-math-tutor-bynamanshukla.streamlit.app](https://ai-math-tutor-bynamanshukla.streamlit.app/) |
+| ✳️ **Claude-Style Interface** | Iconic warm terracotta & dark charcoal theme with Newsreader & Plus Jakarta Sans typography |
+| 📁 **Multi-File Access & Scanner** | Upload **PDFs, Images (PNG/JPG), Text notes, Worksheets, or Code** directly in the chat bar |
+| 📄 **File Creation (Claude Artifacts)** | Creates downloadable **Practice Worksheets**, **Formula Cheat Sheets**, and **Solved Problem Sets** (`.md`) |
+| 🎓 **Class Selector** | Class 1 to 12 — automatically adapts vocabulary, examples, and CBSE/NCERT curriculum difficulty |
+| 📝 **Detailed Worked Solutions** | Clear step-by-step conceptual walkthroughs showing every single calculation |
+| 🎯 **Auto Similar Practice** | Tutor automatically creates a similar practice problem for active self-testing |
 | 📋 **Parent / Session Summary** | Generates a concise progress report for parents and teachers |
-| 🎨 **ChatGPT / Gemini UI** | Distraction-free, responsive dark interface with high-contrast typography & KaTeX math |
 
 ---
 
