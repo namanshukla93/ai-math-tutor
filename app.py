@@ -47,15 +47,30 @@ init_db()
 
 
 # ─────────────────────────────────────────────
-# PAGE CONFIGURATION
+# PAGE CONFIGURATION & LOGO SYSTEM
 # ─────────────────────────────────────────────
 
+def get_starburst_logo(size=26, color="#D97757"):
+    """Returns Claude-style warm coral starburst asterism SVG."""
+    return f"""<svg width="{size}" height="{size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; display: inline-block; flex-shrink: 0;">
+      <line x1="16" y1="3" x2="16" y2="8" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
+      <line x1="16" y1="24" x2="16" y2="29" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
+      <line x1="3" y1="16" x2="8" y2="16" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
+      <line x1="24" y1="16" x2="29" y2="16" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
+      <line x1="6.8" y1="6.8" x2="10.3" y2="10.3" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
+      <line x1="21.7" y1="21.7" x2="25.2" y2="25.2" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
+      <line x1="6.8" y1="25.2" x2="10.3" y2="21.7" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
+      <line x1="21.7" y1="10.3" x2="25.2" y2="6.8" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
+      <circle cx="16" cy="16" r="3.2" fill="{color}"/>
+    </svg>"""
+
 st.set_page_config(
-    page_title="AI Math Tutor",
-    page_icon="📐",
-    layout="centered",
+    page_title="AI Tutor",
+    page_icon="✴️",
+    layout="wide",
     initial_sidebar_state="expanded",
 )
+
 
 
 # ─────────────────────────────────────────────
@@ -137,10 +152,9 @@ st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap');
 
-/* ── Completely Hide All Streamlit Branding & Chrome ── */
+/* ── Hide Streamlit Branding & Chrome while PRESERVING Sidebar Collapsing ── */
 #MainMenu {{visibility: hidden !important; display: none !important;}}
 footer {{visibility: hidden !important; display: none !important;}}
-header {{visibility: hidden !important; display: none !important;}}
 [data-testid="stToolbar"] {{display: none !important; visibility: hidden !important;}}
 [data-testid="stDecoration"] {{display: none !important;}}
 [data-testid="stStatusWidget"] {{display: none !important;}}
@@ -149,134 +163,246 @@ header {{visibility: hidden !important; display: none !important;}}
 button[title="View app in Streamlit Community Cloud"] {{display: none !important;}}
 a[href*="streamlit.io"] {{display: none !important;}}
 
-/* ── Typography & Global Elements ── */
+/* Keep header zero-height and transparent so it never covers content */
+header[data-testid="stHeader"] {{
+    background: transparent !important;
+    height: 0px !important;
+    min-height: 0px !important;
+    pointer-events: none !important;
+    border: none !important;
+}}
+
+/* ── Collapsible Left Sidebar Controls (Screen se kinare / bring back) ── */
+/* When sidebar is collapsed, show the toggle button in the top-left margin */
+[data-testid="stSidebarCollapsedControl"] {{
+    pointer-events: auto !important;
+    display: flex !important;
+    visibility: visible !important;
+    position: fixed !important;
+    top: 14px !important;
+    left: 14px !important;
+    z-index: 100000 !important;
+    background: #22201D !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 8px !important;
+    padding: 3px 6px !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+    transition: all 0.2s ease !important;
+}}
+[data-testid="stSidebarCollapsedControl"]:hover {{
+    background: #2E2C28 !important;
+    border-color: #D97757 !important;
+}}
+[data-testid="stSidebarCollapsedControl"] button {{
+    color: #ECE6DD !important;
+}}
+
+/* Sidebar Collapse button inside the open sidebar */
+[data-testid="stSidebarCollapseButton"] {{
+    visibility: visible !important;
+}}
+[data-testid="stSidebarCollapseButton"] button {{
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 8px !important;
+    color: #9C978D !important;
+    transition: all 0.2s ease !important;
+}}
+[data-testid="stSidebarCollapseButton"] button:hover {{
+    background: #22201D !important;
+    color: #ECE6DD !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}}
+
+/* ── Global Canvas & Typography ── */
 html, body, [class*="css"], .stApp {{
     font-family: {current_font_family} !important;
-    color: #f1f1f4;
+    color: #ECE6DD !important;
 }}
-
-/* ── Luxury Charcoal Background Canvas ── */
 .stApp {{
-    background-color: #131316 !important;
+    background-color: #18181A !important;
 }}
 
-/* ── Centered Main Viewport ── */
+/* Centered Main Viewport */
 .block-container {{
-    max-width: 820px !important;
-    padding-top: 1.2rem !important;
-    padding-bottom: 7rem !important;
+    max-width: 840px !important;
+    padding-top: 0.8rem !important;
+    padding-bottom: 6rem !important;
 }}
 
-/* ── Top Header ── */
-.top-header {{
+/* ── Top Bar in Main Canvas ── */
+.claude-top-bar {{
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 0.9rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}}
-.top-brand {{
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: #fbfbfa;
-    letter-spacing: -0.01em;
-}}
-.top-icon {{
-    color: #da7756;
-    font-size: 1.35rem;
-}}
-.top-user-pill {{
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 9999px;
-    padding: 0.3rem 0.85rem;
-}}
-.user-badge-name {{
-    color: #fbfbfa;
-    font-weight: 600;
-    font-size: 0.88rem;
-}}
-.top-badge {{
-    background: rgba(218, 119, 86, 0.16);
-    border: 1px solid rgba(218, 119, 86, 0.35);
-    color: #e5987d;
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding: 0.15rem 0.65rem;
-    border-radius: 9999px;
-}}
-
-/* ── Focus Mode Banner ── */
-.focus-banner {{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(218, 119, 86, 0.12);
-    border: 1px solid rgba(218, 119, 86, 0.3);
-    border-radius: 12px;
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
-    color: #fbfbfa;
+    padding: 0.2rem 0 1rem 0;
     margin-bottom: 1.2rem;
 }}
-
-/* ── Welcome Screen ── */
-.welcome-hero {{
-    text-align: center;
-    padding: 2.8rem 1rem 1.6rem 1rem;
+.claude-top-right {{
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-left: auto;
 }}
-.welcome-icon {{
+.claude-plan-text {{
+    font-size: 0.84rem;
+    color: #8E8B85;
+    font-weight: 500;
+}}
+.claude-upgrade-link {{
+    color: #D97757;
+    text-decoration: none;
+    font-weight: 600;
+    margin-left: 4px;
+}}
+.claude-upgrade-link:hover {{
+    text-decoration: underline;
+}}
+.claude-ghost-avatar {{
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: #C5C2BB;
+}}
+
+/* ── Claude Center Hero Greeting ── */
+.claude-hero-container {{
+    text-align: center;
+    padding: 2.2rem 0.5rem 1.2rem 0.5rem;
+}}
+.claude-hero-title {{
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 2.85rem;
+    font-weight: 400;
+    color: #ECE6DD;
+    letter-spacing: -0.015em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 2rem;
+}}
+
+/* ── Claude Prompt Mockup Card ── */
+.claude-prompt-card {{
+    background: #22201D;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 1.15rem 1.4rem 1rem 1.4rem;
+    text-align: left;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    margin-bottom: 1.2rem;
+}}
+.claude-prompt-placeholder {{
+    color: #8E8B85;
+    font-size: 1.05rem;
+    padding-bottom: 2rem;
+    user-select: none;
+}}
+.claude-prompt-footer {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 0.75rem;
+}}
+.claude-prompt-left {{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}}
+.claude-tool-btn {{
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ECE6DD;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
-    background: rgba(218, 119, 86, 0.14);
-    border: 1.5px solid rgba(218, 119, 86, 0.35);
-    color: #da7756;
-    font-size: 1.85rem;
-    margin-bottom: 0.9rem;
-    box-shadow: 0 4px 20px rgba(218, 119, 86, 0.2);
+    font-size: 1.1rem;
+    font-weight: 600;
 }}
-.welcome-title {{
-    font-family: 'Newsreader', serif;
-    font-size: 2.3rem;
-    font-weight: 500;
-    color: #fbfbfa;
-    margin-bottom: 0.5rem;
-    letter-spacing: -0.01em;
+.claude-pill-active {{
+    background: #2E2C28;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    padding: 0.2rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #ECE6DD;
 }}
-.welcome-sub {{
-    font-size: 1rem;
-    color: #a1a1aa;
-    max-width: 560px;
-    margin: 0 auto 2rem auto;
-    line-height: 1.6;
+.claude-pill-subtle {{
+    color: #8E8B85;
+    font-size: 0.82rem;
+    padding: 0.2rem 0.4rem;
+}}
+.claude-prompt-right {{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}}
+.claude-model-badge {{
+    color: #8E8B85;
+    font-size: 0.82rem;
+}}
+.claude-tool-icon {{
+    font-size: 0.95rem;
+    color: #8E8B85;
 }}
 
-/* ── Buttons ── */
-.stButton > button {{
-    background: #1c1c22 !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 12px !important;
-    color: #f4f4f5 !important;
+/* ── Claude Quick Action Pills (Buttons) ── */
+div[data-testid="column"] .stButton > button {{
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
+    border-radius: 9999px !important;
+    color: #C5C2BB !important;
+    font-size: 0.84rem !important;
+    font-weight: 500 !important;
+    padding: 0.35rem 0.8rem !important;
+    transition: all 0.2s ease !important;
+}}
+div[data-testid="column"] .stButton > button:hover {{
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px);
+}}
+
+/* ── Sidebar Styling ── */
+[data-testid="stSidebar"] {{
+    background-color: #131315 !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}}
+[data-testid="stSidebar"] * {{
+    color: #C5C2BB !important;
+}}
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {{
+    color: #ECE6DD !important;
+}}
+
+/* Sidebar New Button */
+[data-testid="stSidebar"] .stButton > button {{
+    background: #22201D !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+    color: #ECE6DD !important;
     font-weight: 600 !important;
     font-size: 0.92rem !important;
     transition: all 0.2s ease !important;
 }}
-.stButton > button:hover {{
-    background: #272730 !important;
-    border-color: #da7756 !important;
-    color: #ffffff !important;
-    transform: translateY(-1px);
+[data-testid="stSidebar"] .stButton > button:hover {{
+    background: #2D2B27 !important;
+    border-color: #D97757 !important;
+    color: #FFFFFF !important;
 }}
 
 /* ── Chat Messages ── */
@@ -286,69 +412,83 @@ html, body, [class*="css"], .stApp {{
     padding: 0.65rem 0 !important;
     margin-bottom: 0.4rem !important;
 }}
-
-/* User Bubble */
 [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {{
     display: flex;
     justify-content: flex-end;
 }}
 [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) > div {{
-    background: #23232c !important;
+    background: #242220 !important;
     border-radius: 18px !important;
     padding: 0.9rem 1.35rem !important;
     max-width: 85%;
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
 }}
-
-/* Assistant (AI Tutor) Bubble */
 [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) > div {{
-    background: #191920 !important;
+    background: #1C1B19 !important;
     border-radius: 18px !important;
     padding: 1.3rem 1.6rem !important;
     border: 1px solid rgba(255, 255, 255, 0.06);
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
 }}
-
-/* Typography inside chat */
 [data-testid="stChatMessage"] p,
 [data-testid="stChatMessage"] li,
 [data-testid="stChatMessage"] span,
 [data-testid="stChatMessage"] div {{
-    color: #f4f4f5 !important;
+    color: #ECE6DD !important;
     font-size: 1.02rem !important;
     line-height: 1.75 !important;
 }}
 [data-testid="stChatMessage"] strong {{
-    color: #e5987d !important;
+    color: #E29278 !important;
     font-weight: 700;
 }}
 [data-testid="stChatMessage"] code {{
-    background: #121216 !important;
-    color: #f59e0b !important;
+    background: #121214 !important;
+    color: #F59E0B !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     padding: 0.15rem 0.4rem !important;
     border-radius: 6px !important;
     font-family: 'JetBrains Mono', monospace !important;
 }}
 
-/* ── KaTeX Math Formula Highlight ── */
+/* ── KaTeX Formulas ── */
 .katex, .katex * {{
-    color: #fbfbfa !important;
+    color: #ECE6DD !important;
     font-size: 1.08em !important;
 }}
 .katex-display {{
-    background: rgba(218, 119, 86, 0.08) !important;
-    border-left: 3px solid #da7756 !important;
+    background: rgba(217, 119, 87, 0.08) !important;
+    border-left: 3px solid #D97757 !important;
     border-radius: 8px !important;
     padding: 0.75rem 1rem !important;
     margin: 0.85rem 0 !important;
 }}
 
+/* ── Floating Prompt Input ── */
+[data-testid="stChatInput"] {{
+    background: #22201D !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45) !important;
+    transition: all 0.25s ease;
+}}
+[data-testid="stChatInput"]:focus-within {{
+    border-color: #D97757 !important;
+    box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.3) !important;
+}}
+[data-testid="stChatInput"] textarea {{
+    color: #ECE6DD !important;
+    font-size: 1.02rem !important;
+}}
+[data-testid="stChatInput"] textarea::placeholder {{
+    color: #8E8B85 !important;
+}}
+
 /* ── Artifact & Card Container ── */
 .artifact-box {{
-    background: #191920;
-    border: 1.5px solid rgba(218, 119, 86, 0.35);
+    background: #1E1D1B;
+    border: 1.5px solid rgba(217, 119, 87, 0.35);
     border-radius: 14px;
     padding: 1.25rem 1.45rem;
     margin: 1rem 0;
@@ -356,7 +496,7 @@ html, body, [class*="css"], .stApp {{
 .artifact-box-title {{
     font-size: 1.08rem;
     font-weight: 700;
-    color: #fbfbfa;
+    color: #ECE6DD;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -364,104 +504,31 @@ html, body, [class*="css"], .stApp {{
 }}
 .artifact-box-desc {{
     font-size: 0.88rem;
-    color: #a1a1aa;
+    color: #9C978D;
     margin-bottom: 0.9rem;
     line-height: 1.6;
 }}
 
-/* ── About Section Cards ── */
-.about-hero {{
-    background: linear-gradient(135deg, #231f20 0%, #17171c 100%);
-    border: 1px solid rgba(218, 119, 86, 0.35);
-    border-radius: 18px;
-    padding: 1.8rem 2rem;
-    margin-bottom: 1.5rem;
-}}
-.about-badge {{
-    display: inline-block;
-    background: rgba(218, 119, 86, 0.18);
-    color: #e5987d;
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    margin-bottom: 0.6rem;
-}}
-.about-title {{
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #fbfbfa;
-    margin-bottom: 0.4rem;
-}}
-.about-sub {{
-    font-size: 0.98rem;
-    color: #d4d4d8;
-    line-height: 1.65;
-}}
-.profile-card {{
-    background: #191920;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
-    padding: 1.4rem 1.6rem;
-    margin-bottom: 1rem;
-}}
-
-/* ── Attached File Chip ── */
-.file-chip {{
-    display: inline-flex;
+/* ── Focus Banner ── */
+.focus-banner {{
+    display: flex;
     align-items: center;
-    gap: 0.5rem;
-    background: rgba(218, 119, 86, 0.14);
-    border: 1px solid rgba(218, 119, 86, 0.35);
-    border-radius: 10px;
-    padding: 0.4rem 0.85rem;
-    color: #fbfbfa;
-    font-size: 0.88rem;
-    font-weight: 600;
-    margin-bottom: 0.6rem;
-}}
-
-/* ── Floating Prompt Bar ── */
-[data-testid="stChatInput"] {{
-    background: #1c1c24 !important;
-    border: 1.5px solid rgba(255, 255, 255, 0.14) !important;
-    border-radius: 20px !important;
-    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45) !important;
-    transition: all 0.25s ease;
-}}
-[data-testid="stChatInput"]:focus-within {{
-    border-color: #da7756 !important;
-    box-shadow: 0 0 0 3px rgba(218, 119, 86, 0.3) !important;
-}}
-[data-testid="stChatInput"] textarea {{
-    color: #ffffff !important;
-    font-size: 1.02rem !important;
-}}
-[data-testid="stChatInput"] textarea::placeholder {{
-    color: #71717a !important;
-}}
-
-/* ── Sidebar ── */
-[data-testid="stSidebar"] {{
-    background-color: #0e0e11 !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-}}
-[data-testid="stSidebar"] * {{
-    color: #d4d4d8 !important;
-}}
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3 {{
-    color: #fbfbfa !important;
+    justify-content: space-between;
+    background: rgba(217, 119, 87, 0.12);
+    border: 1px solid rgba(217, 119, 87, 0.3);
+    border-radius: 12px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    color: #ECE6DD;
+    margin-bottom: 1.2rem;
 }}
 
 /* ── Download Button Styling ── */
 .stDownloadButton > button {{
-    background: linear-gradient(135deg, #da7756 0%, #c86544 100%) !important;
+    background: linear-gradient(135deg, #D97757 0%, #C86544 100%) !important;
     border: none !important;
     border-radius: 10px !important;
-    color: #ffffff !important;
+    color: #FFFFFF !important;
     font-weight: 700 !important;
 }}
 </style>
@@ -592,11 +659,13 @@ def send_to_tutor(user_text: str, image=None, file_meta=None):
 
 if not st.session_state.is_logged_in:
     st.markdown(
-        """
+        f"""
         <div style="text-align: center; margin-top: 1.5rem; margin-bottom: 2rem;">
-            <div style="display: inline-flex; align-items: center; justify-content: center; width: 68px; height: 68px; border-radius: 20px; background: rgba(217, 119, 87, 0.15); border: 1px solid rgba(217, 119, 87, 0.4); font-size: 34px; margin-bottom: 1.1rem; box-shadow: 0 10px 30px rgba(217, 119, 87, 0.25);">📐</div>
-            <h1 style="font-size: 2.3rem; font-weight: 800; color: #f5f5f7; margin: 0; letter-spacing: -0.03em;">AI Math Tutor</h1>
-            <p style="color: #9c9ca4; font-size: 1.05rem; margin-top: 0.6rem; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 68px; height: 68px; border-radius: 20px; background: rgba(217, 119, 87, 0.12); border: 1px solid rgba(217, 119, 87, 0.35); margin-bottom: 1.1rem; box-shadow: 0 10px 30px rgba(217, 119, 87, 0.2);">
+                {get_starburst_logo(size=38)}
+            </div>
+            <h1 style="font-family: 'Newsreader', Georgia, serif; font-size: 2.5rem; font-weight: 400; color: #ECE6DD; margin: 0; letter-spacing: -0.02em;">AI Tutor</h1>
+            <p style="color: #9C978D; font-size: 1.05rem; margin-top: 0.6rem; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.5;">
                 Master mathematics with step-by-step conceptual explanations, personalized practice problems, and your private workspace.
             </p>
         </div>
@@ -703,13 +772,28 @@ if st.session_state.is_logged_in and (not st.session_state.chat_sessions or not 
 # SIDEBAR NAVIGATION & PROFILE SETTINGS
 # ─────────────────────────────────────────────
 
+# ─────────────────────────────────────────────
+# SIDEBAR NAVIGATION & CLAUDE LEFT PANEL
+# ─────────────────────────────────────────────
+
 with st.sidebar:
-    st.markdown("### 📐 AI Tutor")
+    # 1. Header with Asterism Starburst Logo
+    st.markdown(
+        f"""
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.2rem 0 0.8rem 0;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                {get_starburst_logo(size=22)}
+                <span style="font-size: 1.15rem; font-weight: 700; color: #ECE6DD; letter-spacing: -0.01em;">AI Tutor</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     uid = st.session_state.get("user_id", 1)
 
-    # 1. Start New Chat Button
-    if st.button("➕ Start new chat", use_container_width=True, key="new_chat_btn"):
+    # 2. + New Button (Full-width rounded pill button)
+    if st.button("➕ New", use_container_width=True, key="new_chat_btn"):
         new_sid = f"chat_{uid}_{int(time.time())}"
         create_db_chat(uid, new_sid, "New Chat")
         st.session_state.chat_sessions[new_sid] = {
@@ -726,14 +810,47 @@ with st.sidebar:
         st.session_state.active_nav = "💬 Chat"
         st.rerun()
 
-    # 2. Recent Chats List (Persistent SQLite History)
-    st.markdown("**📜 Recent Chats**")
+    # 3. Primary Navigation Items (Matching Claude Sidebar)
+    if st.button("📁 Projects", key="side_nav_projects", use_container_width=True):
+        st.session_state.active_nav = "📁 Projects"
+        st.rerun()
+
+    if st.button("🗂️ Artifacts", key="side_nav_artifacts", use_container_width=True):
+        st.session_state.active_nav = "📄 Artifacts"
+        st.rerun()
+
+    col_nav_code, col_nav_upg = st.columns([3.8, 1.4])
+    with col_nav_code:
+        if st.button("💻 Code", key="side_nav_code", use_container_width=True):
+            st.session_state.active_nav = "💻 Code"
+            st.rerun()
+    with col_nav_upg:
+        st.markdown(
+            "<div style='padding-top: 7px;'><span style='background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #8E8B85; font-size: 0.72rem; padding: 2px 7px; border-radius: 9999px; font-weight: 600;'>Upgrade</span></div>",
+            unsafe_allow_html=True,
+        )
+
+    if st.button("🎛️ Customize", key="side_nav_customize", use_container_width=True):
+        st.session_state.active_nav = "ℹ️ About"
+        st.rerun()
+
+    # 4. Chats and Tasks Section
+    st.markdown(
+        """
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.2rem; margin-bottom: 0.45rem; padding: 0 4px;">
+            <span style="font-size: 0.76rem; font-weight: 600; color: #787570; text-transform: uppercase; letter-spacing: 0.05em;">Chats and tasks</span>
+            <span style="font-size: 0.85rem; color: #787570; cursor: pointer;" title="Filter">⫶⫶</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     for sid, sdata in list(st.session_state.chat_sessions.items()):
         is_active = (sid == st.session_state.active_session_id)
         display_title = sdata.get("title", "Chat")
         col_c, col_d = st.columns([5, 1])
         with col_c:
-            btn_text = f"👉 **{display_title}**" if is_active else f"💬 {display_title}"
+            btn_text = f"◦ **{display_title}**" if is_active else f"◦ {display_title}"
             if st.button(btn_text, key=f"sbtn_{sid}", use_container_width=True):
                 if not sdata.get("loaded", False):
                     msgs = get_db_messages(sid, uid)
@@ -768,151 +885,95 @@ with st.sidebar:
                         st.session_state.gemini_history = st.session_state.chat_sessions[rem_id]["gemini_history"]
                     st.rerun()
 
-    st.markdown("---")
+    # 5. User Account Profile Popover (Bottom of Sidebar matching screenshot)
+    initial = st.session_state.user_name[:1].upper() if st.session_state.user_name else "N"
+    first_name = st.session_state.user_name.split()[0] if st.session_state.user_name else "Naman"
+    st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
+    with st.popover(f"👤 {initial}   {first_name} · Free  ▾", use_container_width=True):
+        st.markdown(
+            f"<div style='font-size: 0.82rem; color: #8E8B85; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.08);'>{st.session_state.user_email}</div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            """
+            <div style="padding: 0.5rem 0; font-size: 0.88rem; line-height: 2.1; color: #ECE6DD;">
+                <div>⚙️ <b>Settings</b> &nbsp; <span style='color: #787570; font-size: 0.78rem;'>Ctrl+Shift+,</span></div>
+                <div>🌐 <b>Language:</b> English</div>
+                <div>❓ <b>Get help</b></div>
+                <div>⬆️ <b>Upgrade plan</b></div>
+                <div>📱 <b>Get apps and extensions</b></div>
+                <div>ℹ️ <b>Learn more &gt;</b></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    # 3. Main Navigation Tabs (Includes Chat History & Account Details)
-    nav_options = [
-        "💬 Chat",
-        "📜 Chat History",
-        "👤 Account Details",
-        "📁 Projects",
-        "💻 Code",
-        "📄 Artifacts",
-        "ℹ️ About",
-    ]
-    cur_idx = nav_options.index(st.session_state.active_nav) if st.session_state.active_nav in nav_options else 0
-    st.session_state.active_nav = st.radio(
-        label="Navigation",
-        options=nav_options,
-        index=cur_idx,
-        label_visibility="collapsed",
-    )
+        st.divider()
 
-    st.markdown("---")
-
-    # 4. Class Level Selector
-    st.markdown("**🎓 Class Level**")
-    new_class = st.selectbox(
-        label="Select Class",
-        options=list(range(1, 13)),
-        index=st.session_state.class_level - 1,
-        format_func=lambda x: f"Class {x}",
-        label_visibility="collapsed",
-    )
-    if new_class != st.session_state.class_level:
-        st.session_state.class_level = new_class
-        update_user_profile(uid, st.session_state.user_name, new_class)
-        st.session_state.show_summary = False
-        st.session_state.summary_text = ""
-        st.rerun()
-
-    # 5. Quick Session Summary
-    if st.button("📋 Session Summary", use_container_width=True):
-        if key_error:
-            st.error(key_error)
-        elif not st.session_state.messages:
-            st.warning("Chat first to generate a summary.")
-        else:
-            system_prompt = get_system_prompt(st.session_state.class_level)
-            with st.spinner("Generating summary..."):
-                summary = generate_parent_summary(
-                    api_key=api_key,
-                    system_prompt=system_prompt,
-                    chat_history=st.session_state.gemini_history,
-                )
-            st.session_state.summary_text = summary
-            st.session_state.show_summary = True
-            st.rerun()
-
-    st.markdown("---")
-
-    # 6. Quick Preferences Popover
-    with st.popover("⚙️ Quick Settings", use_container_width=True):
-        st.markdown("#### ⚙️ Reading & Focus")
-        
-        # A. Font Style Selector
-        st.markdown("**🔤 Reading Font**")
+        # Preferences Controls Inside Popover
+        st.markdown("<b style='color: #ECE6DD; font-size: 0.85rem;'>Reading & Study Preferences</b>", unsafe_allow_html=True)
         selected_font = st.selectbox(
-            "Change Font:",
+            "Reading Font:",
             options=["Modern Sans", "Classic Editorial", "Clean Mono"],
             index=["Modern Sans", "Classic Editorial", "Clean Mono"].index(st.session_state.font_style),
-            label_visibility="collapsed",
+            key="pop_font_sel",
         )
         if selected_font != st.session_state.font_style:
             st.session_state.font_style = selected_font
             st.rerun()
 
-        st.divider()
+        new_class = st.selectbox(
+            "Academic Grade:",
+            options=list(range(1, 13)),
+            index=st.session_state.class_level - 1,
+            format_func=lambda x: f"Class {x}",
+            key="pop_class_sel",
+        )
+        if new_class != st.session_state.class_level:
+            st.session_state.class_level = new_class
+            update_user_profile(uid, st.session_state.user_name, new_class)
+            st.rerun()
 
-        # B. Notification When Problem Solved
-        st.markdown("**🔔 Notifications**")
-        notif_val = st.toggle("Notify when problem solved", value=st.session_state.notify_solved)
+        notif_val = st.toggle("Notify when problem solved", value=st.session_state.notify_solved, key="pop_notif_tog")
         if notif_val != st.session_state.notify_solved:
             st.session_state.notify_solved = notif_val
             st.rerun()
 
-        st.divider()
-
-        # C. Time & Focus Mode
-        st.markdown("**⏱️ Time & Focus**")
-        elapsed_mins = int((time.time() - st.session_state.session_start_time) / 60)
-        st.caption(f"Study Session Time: **{elapsed_mins} minutes**")
-
-        focus_val = st.toggle("Focus Mode (Distraction-Free)", value=st.session_state.focus_mode)
+        focus_val = st.toggle("Focus Mode (Distraction-Free)", value=st.session_state.focus_mode, key="pop_focus_tog")
         if focus_val != st.session_state.focus_mode:
             st.session_state.focus_mode = focus_val
             st.rerun()
 
-    # 7. USER ACCOUNT CARD (Bottom of sidebar like Claude & ChatGPT)
-    initials = st.session_state.user_name[:2].upper() if st.session_state.user_name else "NS"
-    st.markdown(
-        f"""
-        <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 0.75rem 0.85rem; margin-top: 0.6rem; margin-bottom: 0.6rem;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #da7756, #c86544); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; font-size: 0.88rem; flex-shrink: 0;">
-                    {initials}
-                </div>
-                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    <div style="font-weight: 600; color: #fbfbfa; font-size: 0.92rem; line-height: 1.2;">{st.session_state.user_name}</div>
-                    <div style="color: #9c9ca4; font-size: 0.78rem; line-height: 1.2;">{st.session_state.user_email}</div>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        st.divider()
 
-    btn_acc, btn_logout = st.columns([1.1, 1])
-    with btn_acc:
-        if st.button("👤 Account", key="side_account_nav_btn", use_container_width=True, help="View Account Details"):
-            st.session_state.active_nav = "👤 Account Details"
-            st.rerun()
-    with btn_logout:
-        if st.button("🚪 Logout", key="side_logout_direct_btn", use_container_width=True, help="Sign out"):
-            st.session_state.is_logged_in = False
-            st.session_state.user_name = ""
-            st.session_state.user_email = ""
-            st.session_state.user_id = None
-            st.session_state.messages = []
-            st.session_state.gemini_history = []
-            st.session_state.chat_sessions = {}
-            st.rerun()
+        col_pa, col_pl = st.columns(2)
+        with col_pa:
+            if st.button("👤 Account", key="pop_acc_btn", use_container_width=True):
+                st.session_state.active_nav = "👤 Account Details"
+                st.rerun()
+        with col_pl:
+            if st.button("🚪 Log out", key="pop_logout_btn", use_container_width=True):
+                st.session_state.is_logged_in = False
+                st.session_state.user_name = ""
+                st.session_state.user_email = ""
+                st.session_state.user_id = None
+                st.session_state.messages = []
+                st.session_state.gemini_history = []
+                st.session_state.chat_sessions = {}
+                st.rerun()
 
 
 # ─────────────────────────────────────────────
-# MAIN TOP HEADER WITH DYNAMIC USER IDENTITY
+# MAIN TOP BAR (Free plan · Upgrade & Ghost Avatar)
 # ─────────────────────────────────────────────
 
 st.markdown(
-    f"""
-    <div class="top-header">
-        <div class="top-brand">
-            <span class="top-icon">📐</span>
-            <span>AI Tutor</span>
-        </div>
-        <div class="top-user-pill">
-            <span class="user-badge-name">👤 {st.session_state.user_name}</span>
-            <span class="top-badge">Class {st.session_state.class_level}</span>
+    """
+    <div class="claude-top-bar">
+        <div></div>
+        <div class="claude-top-right">
+            <span class="claude-plan-text">Free plan · <a href="#upgrade" class="claude-upgrade-link">Upgrade</a></span>
+            <div class="claude-ghost-avatar">👻</div>
         </div>
     </div>
     """,
@@ -955,54 +1016,59 @@ if key_error:
 
 if st.session_state.active_nav == "💬 Chat":
 
-    # Welcome Screen
+    # Welcome Screen / Center Hero Greeting (Matching Claude Reference Screenshot)
     if not st.session_state.messages:
+        first_name = st.session_state.user_name.split()[0] if st.session_state.user_name else "there"
         st.markdown(
             f"""
-            <div class="welcome-hero">
-                <div class="welcome-icon">📐</div>
-                <div class="welcome-title">Welcome back, {st.session_state.user_name}!</div>
-                <div class="welcome-sub">
-                    What math problem would you like to master today?
-                    Attach <b>photos, PDFs, or worksheets</b> below. I will explain the complete
-                    detailed solution, and create a <b>similar practice problem</b> for you!
+            <div class="claude-hero-container">
+                <div class="claude-hero-title">
+                    {get_starburst_logo(size=36)}
+                    <span>Let's solve, {first_name}</span>
+                </div>
+                <div class="claude-prompt-card">
+                    <div class="claude-prompt-placeholder">How can I help you today?</div>
+                    <div class="claude-prompt-footer">
+                        <div class="claude-prompt-left">
+                            <span class="claude-tool-btn">+</span>
+                            <span class="claude-pill-active">Chat</span>
+                            <span class="claude-pill-subtle">Step-by-Step</span>
+                        </div>
+                        <div class="claude-prompt-right">
+                            <span class="claude-model-badge">AI Tutor 2.5 Flash</span>
+                            <span class="claude-tool-icon">🎙️</span>
+                            <span class="claude-tool-icon">〰️</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🍕 Explain Fractions with real-life examples", use_container_width=True):
-                send_to_tutor(f"Explain fractions with simple real-life examples for Class {st.session_state.class_level}.")
+        # Quick Action Pill Chips (5 Buttons Underneath Prompt Box)
+        col_p1, col_p2, col_p3, col_p4, col_p5 = st.columns(5)
+        with col_p1:
+            if st.button("✏️ Step-by-Step", use_container_width=True, key="hero_step"):
+                send_to_tutor(f"Solve this math problem with complete step-by-step reasoning and a similar practice problem for Class {st.session_state.class_level}.")
+                st.rerun()
+        with col_p2:
+            if st.button("🎓 Learn", use_container_width=True, key="hero_learn"):
+                send_to_tutor(f"Teach me a core math concept from Class {st.session_state.class_level} using simple intuition and real-world examples.")
+                st.rerun()
+        with col_p3:
+            if st.button("</> Code", use_container_width=True, key="hero_code"):
+                send_to_tutor("Write a clean Python script to visualize and solve a math algorithm with step-by-step comments.")
+                st.rerun()
+        with col_p4:
+            if st.button("☕ Practice", use_container_width=True, key="hero_practice"):
+                send_to_tutor(f"Give me 3 engaging math practice puzzles suited for Class {st.session_state.class_level} with progressive hints.")
+                st.rerun()
+        with col_p5:
+            if st.button("💡 Tutor's choice", use_container_width=True, key="hero_choice"):
+                send_to_tutor("Surprise me with a fascinating, real-world application of mathematics that connects to everyday life!")
                 st.rerun()
 
-            if st.button("📐 Solve 3x + 12 = 45 with detailed steps", use_container_width=True):
-                send_to_tutor("Solve 3x + 12 = 45 with complete step-by-step working and a similar practice problem.")
-                st.rerun()
-
-        with col2:
-            if st.button("📄 Generate a Practice Worksheet file for me", use_container_width=True):
-                with st.spinner("Generating Practice Worksheet artifact..."):
-                    fname, fcontent = create_math_artifact(
-                        api_key=api_key,
-                        topic="Fractions and Decimals" if st.session_state.class_level <= 6 else "Linear Equations",
-                        class_level=st.session_state.class_level,
-                        artifact_type="worksheet",
-                    )
-                st.session_state.artifacts.append({"name": fname, "content": fcontent, "type": "worksheet"})
-                send_to_tutor(
-                    f"I generated a practice worksheet file for you: **{fname}**! "
-                    "Download it from the Artifacts section or click download below. Let's solve the first question together!"
-                )
-                st.rerun()
-
-            if st.button("📎 What file formats can I attach?", use_container_width=True):
-                send_to_tutor(
-                    "What file formats can I upload here? Explain how you can read photos, PDFs, textbooks, and homework notes."
-                )
-                st.rerun()
 
     # Render Chat History
     for msg in st.session_state.messages:
