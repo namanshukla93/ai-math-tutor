@@ -242,11 +242,15 @@ header[data-testid="stHeader"] {{
 
 /* ── Global Canvas & Typography ── */
 html, body, [class*="css"], .stApp {{
-    font-family: {current_font_family} !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
     color: #ECE6DD !important;
 }}
 .stApp {{
-    background-color: #18181A !important;
+    background-color: #1F1E1B !important;
+}}
+[data-testid="stSidebar"] {{
+    background-color: #161513 !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
 }}
 
 /* Centered Main Viewport */
@@ -276,7 +280,7 @@ html, body, [class*="css"], .stApp {{
     font-weight: 500;
 }}
 .claude-upgrade-link {{
-    color: #D97757;
+    color: #60A5FA !important;
     text-decoration: none;
     font-weight: 600;
     margin-left: 4px;
@@ -610,6 +614,179 @@ div[data-testid="stDialog"] input {{
     background: #2E2C28 !important;
     color: #ECE6DD !important;
     font-weight: 600 !important;
+}}
+
+/* ── Claude Command Board (Interactive Center Composer) ── */
+.claude-composer-shell {{
+    max-width: 760px !important;
+    margin: 0 auto 1.2rem auto !important;
+}}
+.claude-composer-shell [data-testid="stForm"] {{
+    background: #242220 !important;
+    background-color: #242220 !important;
+    border: 1px solid #363430 !important;
+    border-radius: 18px !important;
+    padding: 16px 20px 14px 20px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
+    transition: all 0.2s ease !important;
+}}
+.claude-composer-shell [data-testid="stForm"]:focus-within {{
+    border-color: #4D4943 !important;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55) !important;
+}}
+
+/* Remove borders, backgrounds, and outlines from Streamlit text area */
+.claude-composer-shell [data-testid="stTextArea"],
+.claude-composer-shell [data-testid="stTextArea"] > div,
+.claude-composer-shell [data-testid="stTextArea"] > div > div {{
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}}
+.claude-composer-shell [data-testid="stTextArea"] > div:focus-within {{
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}}
+.claude-composer-shell textarea {{
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: #ECE6DD !important;
+    font-size: 1.05rem !important;
+    padding: 0 !important;
+    line-height: 1.6 !important;
+    resize: none !important;
+}}
+.claude-composer-shell textarea:focus {{
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}}
+.claude-composer-shell textarea::placeholder {{
+    color: #8E8B85 !important;
+    font-weight: 400 !important;
+}}
+
+/* Hide "Press Ctrl+Enter to submit form" */
+.claude-composer-shell [data-testid="InputInstructions"] {{
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+}}
+
+/* Submit button in command board: Claude circular coral button */
+.claude-composer-shell [data-testid="stFormSubmitButton"] button,
+.claude-composer-shell button[kind="primary"],
+.claude-composer-shell button[data-testid="baseButton-primary"] {{
+    background-color: #D97757 !important;
+    background: #D97757 !important;
+    border: none !important;
+    border-radius: 50% !important;
+    color: #FFFFFF !important;
+    font-size: 1.3rem !important;
+    font-weight: 700 !important;
+    width: 38px !important;
+    min-width: 38px !important;
+    max-width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 4px 14px rgba(217, 119, 87, 0.4) !important;
+    cursor: pointer !important;
+    transition: transform 0.15s ease, background 0.15s ease !important;
+}}
+.claude-composer-shell [data-testid="stFormSubmitButton"] button:hover,
+.claude-composer-shell button[kind="primary"]:hover {{
+    background-color: #E28365 !important;
+    background: #E28365 !important;
+    transform: scale(1.06) !important;
+}}
+.claude-composer-shell [data-testid="stFormSubmitButton"] button:active {{
+    transform: scale(0.96) !important;
+}}
+
+/* Attach button & expander in command board */
+.claude-composer-shell details {{
+    background: transparent !important;
+    border: 1px dashed rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important;
+    margin: 8px 0 !important;
+    padding: 4px 10px !important;
+}}
+.claude-composer-shell details summary {{
+    color: #9C978D !important;
+    font-size: 0.84rem !important;
+    cursor: pointer !important;
+}}
+.claude-composer-shell details[open] {{
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-color: rgba(217, 119, 87, 0.3) !important;
+}}
+.claude-composer-shell [data-testid="stFileUploader"] {{
+    padding: 0 !important;
+}}
+
+/* 5 Action Pills below Command Board */
+.claude-action-pills {{
+    max-width: 760px !important;
+    margin: 0 auto 1.5rem auto !important;
+}}
+.claude-action-pills [data-testid="column"] button,
+.claude-action-pills button {{
+    background: #242220 !important;
+    background-color: #242220 !important;
+    border: 1px solid #363430 !important;
+    border-radius: 12px !important;
+    color: #C4BFB5 !important;
+    font-size: 0.88rem !important;
+    font-weight: 500 !important;
+    padding: 0.45rem 0.8rem !important;
+    min-height: 38px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+}}
+.claude-action-pills [data-testid="column"] button:hover,
+.claude-action-pills button:hover {{
+    background: #2D2B28 !important;
+    background-color: #2D2B28 !important;
+    border-color: #4D4943 !important;
+    color: #ECE6DD !important;
+    transform: translateY(-1px) !important;
+}}
+
+/* Claude Bottom Fixed Chat Input */
+[data-testid="stChatInput"] {{
+    background: transparent !important;
+    border: none !important;
+}}
+[data-testid="stChatInput"] > div {{
+    background: #242220 !important;
+    border: 1px solid #363430 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45) !important;
+    max-width: 760px !important;
+    margin: 0 auto !important;
+}}
+[data-testid="stChatInput"] > div:focus-within {{
+    border-color: #4D4943 !important;
+}}
+[data-testid="stChatInput"] textarea {{
+    color: #ECE6DD !important;
+    font-size: 1rem !important;
+}}
+[data-testid="stChatInput"] button {{
+    background: #D97757 !important;
+    color: white !important;
+    border-radius: 50% !important;
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -1043,48 +1220,91 @@ def render_settings_dialog():
                     st.session_state.voice_speed = v_spd
 
         elif cur_tab == "Account":
-            st.markdown("<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Account & Profile</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Profile & Account</h3>", unsafe_allow_html=True)
             user_info = get_user_details(uid) if uid else {}
-            st.caption(f"Email: **{st.session_state.user_email}** &nbsp;•&nbsp; Member Since: **{user_info.get('created_at', 'October 2026')}**")
+            initials = (st.session_state.user_name[:2].upper() if st.session_state.user_name else "NS")
+            member_since = user_info.get("created_at", "October 2026") if user_info else "October 2026"
+            total_chats = user_info.get("total_chats", len(st.session_state.chat_sessions)) if user_info else 0
 
-            with st.form("modal_edit_profile_form"):
-                new_name_val = st.text_input("Full Name:", value=st.session_state.user_name)
-                new_class_val = st.selectbox(
-                    "Academic Class Level:",
-                    options=list(range(1, 13)),
-                    index=st.session_state.class_level - 1,
-                    format_func=lambda x: f"Class {x}",
-                )
-                save_prof_btn = st.form_submit_button("Save Profile", type="primary", use_container_width=True)
-                if save_prof_btn:
-                    if new_name_val.strip():
-                        ok_u, msg_u = update_user_profile(uid, new_name_val.strip(), new_class_val)
-                        if ok_u:
-                            st.session_state.user_name = new_name_val.strip()
-                            st.session_state.class_level = new_class_val
-                            st.success("✅ Profile updated!")
-                            st.rerun()
-                        else:
-                            st.error(msg_u)
+            # Pure Profile Details Card
+            st.markdown(
+                f"""
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.2rem; margin-bottom: 1.2rem;">
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #DA7756, #c25f3f); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #ffffff; font-size: 1.35rem; box-shadow: 0 4px 14px rgba(218, 119, 86, 0.35);">
+                            {initials}
+                        </div>
+                        <div>
+                            <div style="font-weight: 700; color: #ECE6DD; font-size: 1.18rem;">{st.session_state.user_name}</div>
+                            <div style="color: #9C978D; font-size: 0.88rem; margin-top: 2px;">{st.session_state.user_email}</div>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 20px; padding: 0.28rem 0.8rem; font-size: 0.8rem; font-weight: 600;">Active Scholar</span>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 1.2rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1rem;">
+                        <div style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px;">
+                            <div style="color: #8E8A82; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em;">Academic Level</div>
+                            <div style="color: #ECE6DD; font-weight: 600; font-size: 0.95rem; margin-top: 2px;">Class {st.session_state.class_level} (CBSE/NCERT)</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px;">
+                            <div style="color: #8E8A82; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em;">Member Since</div>
+                            <div style="color: #ECE6DD; font-weight: 600; font-size: 0.95rem; margin-top: 2px;">{member_since}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px;">
+                            <div style="color: #8E8A82; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em;">Total Study Sessions</div>
+                            <div style="color: #ECE6DD; font-weight: 600; font-size: 0.95rem; margin-top: 2px;">{total_chats} saved chats</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px;">
+                            <div style="color: #8E8A82; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em;">Account Plan</div>
+                            <div style="color: #ECE6DD; font-weight: 600; font-size: 0.95rem; margin-top: 2px;">Free Student Tier</div>
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-            st.markdown("<hr style='border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 1.2rem 0;'>", unsafe_allow_html=True)
-            st.markdown("<b style='color: #ECE6DD;'>Security: Change Password</b>", unsafe_allow_html=True)
-            with st.form("modal_pwd_form"):
-                curr_p = st.text_input("Current Password:", type="password")
-                new_p = st.text_input("New Password:", type="password")
-                conf_p = st.text_input("Confirm New Password:", type="password")
-                chg_btn = st.form_submit_button("Update Password", use_container_width=True)
-                if chg_btn:
-                    if len(new_p) < 6:
-                        st.error("Password must be at least 6 characters.")
-                    elif new_p != conf_p:
-                        st.error("New passwords do not match.")
-                    else:
-                        ok_w, msg_w = change_user_password(uid, curr_p, new_p)
-                        if ok_w:
-                            st.success("✅ Password updated successfully!")
+            # Edit profile options inside a clear expander
+            with st.expander("✏️ Update Profile Information (Name & Class)", expanded=False):
+                with st.form("modal_edit_profile_form"):
+                    new_name_val = st.text_input("Full Name:", value=st.session_state.user_name)
+                    new_class_val = st.selectbox(
+                        "Academic Class Level:",
+                        options=list(range(1, 13)),
+                        index=st.session_state.class_level - 1,
+                        format_func=lambda x: f"Class {x}",
+                    )
+                    save_prof_btn = st.form_submit_button("Save Profile", type="primary", use_container_width=True)
+                    if save_prof_btn:
+                        if new_name_val.strip():
+                            ok_u, msg_u = update_user_profile(uid, new_name_val.strip(), new_class_val)
+                            if ok_u:
+                                st.session_state.user_name = new_name_val.strip()
+                                st.session_state.class_level = new_class_val
+                                st.success("✅ Profile updated!")
+                                st.rerun()
+                            else:
+                                st.error(msg_u)
+
+            # Optional password update tucked away inside an expander so it is NEVER shown upfront
+            with st.expander("🔒 Change Password (Optional)", expanded=False):
+                with st.form("modal_pwd_form"):
+                    curr_p = st.text_input("Current Password:", type="password")
+                    new_p = st.text_input("New Password:", type="password")
+                    conf_p = st.text_input("Confirm New Password:", type="password")
+                    chg_btn = st.form_submit_button("Update Password", use_container_width=True)
+                    if chg_btn:
+                        if len(new_p) < 6:
+                            st.error("Password must be at least 6 characters.")
+                        elif new_p != conf_p:
+                            st.error("New passwords do not match.")
                         else:
-                            st.error(f"❌ {msg_w}")
+                            ok_w, msg_w = change_user_password(uid, curr_p, new_p)
+                            if ok_w:
+                                st.success("✅ Password updated successfully!")
+                            else:
+                                st.error(f"❌ {msg_w}")
 
         elif cur_tab == "Time and focus":
             st.markdown("<h3 style='margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: #ECE6DD;'>Time and Focus</h3>", unsafe_allow_html=True)
@@ -1147,13 +1367,13 @@ if st.session_state.get("open_settings", False):
 
 
 with st.sidebar:
-    # 1. Header with Asterism Starburst Logo
+    # 1. Header with Claude Branding (Matching Reference Screenshot)
     st.markdown(
-        f"""
+        """
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.2rem 0 0.8rem 0;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                {get_starburst_logo(size=22)}
-                <span style="font-size: 1.15rem; font-weight: 700; color: #ECE6DD; letter-spacing: -0.01em;">AI Tutor</span>
+            <div style="display: flex; align-items: center; gap: 9px;">
+                <span style="font-size: 1.35rem; color: #ECE6DD; cursor: pointer;" title="Toggle sidebar">◨</span>
+                <span style="font-family: 'Newsreader', Georgia, serif; font-size: 1.65rem; font-weight: 500; color: #ECE6DD; letter-spacing: -0.02em;">Claude</span>
             </div>
         </div>
         """,
@@ -1162,8 +1382,8 @@ with st.sidebar:
 
     uid = st.session_state.get("user_id", 1)
 
-    # 2. + New Button (Full-width rounded pill button)
-    if st.button("➕ New", use_container_width=True, key="new_chat_btn"):
+    # 2. + New Button (Matching Claude rounded pill button)
+    if st.button("+ New", use_container_width=True, key="new_chat_btn"):
         new_sid = f"chat_{uid}_{int(time.time())}"
         create_db_chat(uid, new_sid, "New Chat")
         st.session_state.chat_sessions[new_sid] = {
@@ -1181,17 +1401,17 @@ with st.sidebar:
         st.rerun()
 
     # 3. Primary Navigation Items (Matching Claude Sidebar)
-    if st.button("📁 Projects", key="side_nav_projects", use_container_width=True):
+    if st.button("⚏ Projects", key="side_nav_projects", use_container_width=True):
         st.session_state.active_nav = "📁 Projects"
         st.rerun()
 
-    if st.button("🗂️ Artifacts", key="side_nav_artifacts", use_container_width=True):
+    if st.button("ஃ Artifacts", key="side_nav_artifacts", use_container_width=True):
         st.session_state.active_nav = "📄 Artifacts"
         st.rerun()
 
     col_nav_code, col_nav_upg = st.columns([3.8, 1.4])
     with col_nav_code:
-        if st.button("💻 Code", key="side_nav_code", use_container_width=True):
+        if st.button("</> Code", key="side_nav_code", use_container_width=True):
             st.session_state.active_nav = "💻 Code"
             st.rerun()
     with col_nav_upg:
@@ -1200,7 +1420,7 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
 
-    if st.button("🎛️ Customize", key="side_nav_customize", use_container_width=True):
+    if st.button("⊡ Customize", key="side_nav_customize", use_container_width=True):
         st.session_state.active_nav = "ℹ️ About"
         st.rerun()
 
@@ -1257,13 +1477,16 @@ with st.sidebar:
 
     # 5. User Account Profile Popover (Bottom of Sidebar matching screenshot)
     initial = st.session_state.user_name[:1].upper() if st.session_state.user_name else "N"
-    first_name = st.session_state.user_name.split()[0] if st.session_state.user_name else "Naman"
-    st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
-    with st.popover(f"👤 {initial}   {first_name} · Free  ▾", use_container_width=True):
+    with st.popover(f"{initial}  {first_name} · Free  ∨    ⊞", use_container_width=True):
         st.markdown(
             f"<div style='font-size: 0.82rem; color: #8E8B85; padding-bottom: 0.5rem; margin-bottom: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.08);'>{st.session_state.user_email}</div>",
             unsafe_allow_html=True,
         )
+
+        if st.button("👤 Profile & Account", key="pop_btn_account", use_container_width=True):
+            st.session_state.settings_tab = "Account"
+            st.session_state.open_settings = True
+            st.rerun()
 
         col_set_b, col_set_k = st.columns([3.5, 1.5])
         with col_set_b:
@@ -1361,33 +1584,114 @@ if st.session_state.active_nav == "💬 Chat":
             <div class="claude-hero-container">
                 <div class="claude-hero-title">
                     {get_starburst_logo(size=36)}
-                    <span>Let's solve, {first_name}</span>
-                </div>
-                <div class="claude-prompt-card">
-                    <div class="claude-prompt-placeholder">How can I help you today?</div>
-                    <div class="claude-prompt-footer">
-                        <div class="claude-prompt-left">
-                            <span class="claude-tool-btn">+</span>
-                            <span class="claude-pill-active">Chat</span>
-                            <span class="claude-pill-subtle">Step-by-Step</span>
-                        </div>
-                        <div class="claude-prompt-right">
-                            <span class="claude-model-badge">AI Tutor 2.5 Flash</span>
-                            <span class="claude-tool-icon">🎙️</span>
-                            <span class="claude-tool-icon">〰️</span>
-                        </div>
-                    </div>
+                    <span>Let's noodle, {first_name}</span>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        # Quick Action Pill Chips (5 Buttons Underneath Prompt Box)
+        # Interactive Claude Command Board (Real Center Textarea + Toolbar)
+        st.markdown('<div class="claude-composer-shell">', unsafe_allow_html=True)
+        with st.form("claude_hero_command_form", clear_on_submit=True):
+            hero_prompt = st.text_area(
+                "Prompt Input",
+                placeholder="How can I help you today?",
+                key="hero_command_input",
+                label_visibility="collapsed",
+                height=110,
+            )
+
+            with st.expander("➕ Add attachment (photo / PDF / code)", expanded=False):
+                hero_file = st.file_uploader(
+                    "Attach File",
+                    type=["png", "jpg", "jpeg", "webp", "pdf", "txt", "md", "csv", "py"],
+                    key="hero_command_file",
+                    label_visibility="collapsed",
+                )
+
+            col_tb_l, col_tb_m, col_tb_r = st.columns([1.6, 2, 0.7])
+            with col_tb_l:
+                st.markdown(
+                    """
+                    <div style="display: flex; align-items: center; gap: 8px; padding-top: 6px;">
+                        <span class="claude-pill-active">Chat</span>
+                        <span class="claude-pill-subtle">Cowork</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            with col_tb_m:
+                st.markdown(
+                    """
+                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; color: #8E8B85; font-size: 0.88rem; padding-top: 7px;">
+                        <span class="claude-model-badge">Sonnet 3.5 &nbsp;Medium ▾</span>
+                        <span style="font-size: 1rem; cursor: pointer;" title="Voice mode enabled">🎙️</span>
+                        <span style="font-size: 1rem; cursor: pointer;" title="Audio waveform">〰️</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            with col_tb_r:
+                hero_submit = st.form_submit_button("↑", type="primary", use_container_width=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Handle Command Board submission
+        if hero_submit:
+            has_text = bool(hero_prompt and hero_prompt.strip())
+            has_file = hero_file is not None
+
+            if has_text or has_file:
+                user_text = hero_prompt.strip() if has_text else ""
+                file_meta = None
+                img_payload = None
+                full_query = user_text
+
+                if has_file:
+                    file_bytes = hero_file.read()
+                    file_name = hero_file.name
+                    mime_type = hero_file.type or ""
+                    ext = file_name.lower().split(".")[-1] if "." in file_name else ""
+
+                    with st.spinner(f"Reading and scanning {file_name}... 📄"):
+                        extracted_text = extract_content_from_file(
+                            api_key=api_key,
+                            file_bytes=file_bytes,
+                            file_name=file_name,
+                            mime_type=mime_type,
+                        )
+
+                    is_image = ext in ["png", "jpg", "jpeg", "webp", "bmp"]
+                    img_payload = file_bytes if is_image else None
+                    file_meta = {"name": file_name, "type": ext.upper() or "Document"}
+
+                    if user_text:
+                        full_query = (
+                            f"{user_text}\n\n"
+                            f"**Extracted Content from '{file_name}':**\n{extracted_text}\n\n"
+                            f"Please provide the detailed step-by-step solution first, "
+                            f"and then create a similar practice problem for me!"
+                        )
+                    else:
+                        full_query = (
+                            f"I attached a file: **{file_name}**\n\n"
+                            f"**Extracted Math Problem(s):**\n{extracted_text}\n\n"
+                            f"Please provide the detailed step-by-step solution first, "
+                            f"and then create a similar practice problem for me!"
+                        )
+
+                send_to_tutor(full_query, image=img_payload, file_meta=file_meta)
+                st.rerun()
+            else:
+                st.toast("Please type a question or math problem to solve!")
+
+        # Quick Action Pill Chips (5 Buttons Underneath Prompt Box matching Claude reference)
+        st.markdown('<div class="claude-action-pills">', unsafe_allow_html=True)
         col_p1, col_p2, col_p3, col_p4, col_p5 = st.columns(5)
         with col_p1:
-            if st.button("✏️ Step-by-Step", use_container_width=True, key="hero_step"):
-                send_to_tutor(f"Solve this math problem with complete step-by-step reasoning and a similar practice problem for Class {st.session_state.class_level}.")
+            if st.button("✏️ Write", use_container_width=True, key="hero_write"):
+                send_to_tutor(f"Help me write a clear, step-by-step solution and mathematical explanation suited for Class {st.session_state.class_level}.")
                 st.rerun()
         with col_p2:
             if st.button("🎓 Learn", use_container_width=True, key="hero_learn"):
@@ -1398,13 +1702,14 @@ if st.session_state.active_nav == "💬 Chat":
                 send_to_tutor("Write a clean Python script to visualize and solve a math algorithm with step-by-step comments.")
                 st.rerun()
         with col_p4:
-            if st.button("☕ Practice", use_container_width=True, key="hero_practice"):
-                send_to_tutor(f"Give me 3 engaging math practice puzzles suited for Class {st.session_state.class_level} with progressive hints.")
+            if st.button("☕ Life stuff", use_container_width=True, key="hero_life"):
+                send_to_tutor("Give me engaging real-world scenarios, practical applications and decision problems connecting math to life.")
                 st.rerun()
         with col_p5:
-            if st.button("💡 Tutor's choice", use_container_width=True, key="hero_choice"):
-                send_to_tutor("Surprise me with a fascinating, real-world application of mathematics that connects to everyday life!")
+            if st.button("💡 Claude's choice", use_container_width=True, key="hero_choice"):
+                send_to_tutor("Surprise me with a fascinating, counterintuitive mathematical puzzle or real-world concept!")
                 st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
     # Render Chat History
@@ -1435,12 +1740,14 @@ if st.session_state.active_nav == "💬 Chat":
             unsafe_allow_html=True,
         )
 
-    # Floating Prompt Bar with Multi-File Upload & Real-time Streaming
-    chat_val = st.chat_input(
-        placeholder=f"Ask any math doubt or attach photos, PDFs, worksheets...",
-        accept_file=True,
-        file_type=["png", "jpg", "jpeg", "webp", "pdf", "txt", "md", "csv", "py"],
-    )
+    # Floating Prompt Bar with Multi-File Upload & Real-time Streaming (Shown during active conversation)
+    chat_val = None
+    if st.session_state.messages:
+        chat_val = st.chat_input(
+            placeholder="Reply to AI Tutor or ask a follow-up question...",
+            accept_file=True,
+            file_type=["png", "jpg", "jpeg", "webp", "pdf", "txt", "md", "csv", "py"],
+        )
 
     if chat_val:
         user_text = ""
@@ -1672,6 +1979,24 @@ elif st.session_state.active_nav == "👤 Account Details":
         )
 
     with col_r:
+        # Profile Details & Information Overview
+        st.markdown(
+            f"""
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.2rem; margin-bottom: 1.2rem;">
+                <h4 style="color: #ECE6DD; margin: 0 0 0.8rem 0; font-size: 1.1rem;">📋 Student Profile Information</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem;">
+                    <div><span style="color: #8E8B85;">Full Name:</span> <b style="color: #ECE6DD;">{st.session_state.user_name}</b></div>
+                    <div><span style="color: #8E8B85;">Email:</span> <b style="color: #ECE6DD;">{st.session_state.user_email}</b></div>
+                    <div><span style="color: #8E8B85;">Grade Level:</span> <b style="color: #DA7756;">Class {st.session_state.class_level} (CBSE/NCERT)</b></div>
+                    <div><span style="color: #8E8B85;">Account Tier:</span> <b style="color: #34d399;">Free Scholar Plan</b></div>
+                    <div><span style="color: #8E8B85;">Member Since:</span> <b style="color: #ECE6DD;">{member_since}</b></div>
+                    <div><span style="color: #8E8B85;">Account Status:</span> <b style="color: #34d399;">Active • Verified</b></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         # Card 1: Edit Profile Details
         st.markdown("#### ✏️ Edit Profile Details")
         with st.form("edit_profile_form"):
@@ -1698,31 +2023,29 @@ elif st.session_state.active_nav == "👤 Account Details":
                     else:
                         st.error(f"❌ {msg_p}")
 
-        st.markdown("---")
+        # Card 2: Security & Password Update (Tucked inside collapsed expander so profile details show first)
+        with st.expander("🔒 Security: Change Password (Optional)", expanded=False):
+            with st.form("change_pwd_form"):
+                current_pwd = st.text_input("Current Password:", type="password", placeholder="••••••••")
+                new_pwd = st.text_input("New Password:", type="password", placeholder="Min 6 characters")
+                confirm_new_pwd = st.text_input("Confirm New Password:", type="password", placeholder="Re-enter new password")
+                save_pwd_btn = st.form_submit_button("🔑 Update Password", use_container_width=True)
 
-        # Card 2: Security & Password Update
-        st.markdown("#### 🔒 Security & Password")
-        with st.form("change_pwd_form"):
-            current_pwd = st.text_input("Current Password:", type="password", placeholder="••••••••")
-            new_pwd = st.text_input("New Password:", type="password", placeholder="Min 6 characters")
-            confirm_new_pwd = st.text_input("Confirm New Password:", type="password", placeholder="Re-enter new password")
-            save_pwd_btn = st.form_submit_button("🔑 Update Password", use_container_width=True)
-
-            if save_pwd_btn:
-                if not current_pwd or not new_pwd:
-                    st.error("Please enter both current and new password.")
-                elif len(new_pwd) < 6:
-                    st.error("New password must be at least 6 characters.")
-                elif new_pwd != confirm_new_pwd:
-                    st.error("New passwords do not match.")
-                else:
-                    ok_w, msg_w = change_user_password(uid, current_pwd, new_pwd)
-                    if ok_w:
-                        st.success("✅ Password changed successfully! Plain text was never stored.")
+                if save_pwd_btn:
+                    if not current_pwd or not new_pwd:
+                        st.error("Please enter both current and new password.")
+                    elif len(new_pwd) < 6:
+                        st.error("New password must be at least 6 characters.")
+                    elif new_pwd != confirm_new_pwd:
+                        st.error("New passwords do not match.")
                     else:
-                        st.error(f"❌ {msg_w}")
+                        ok_w, msg_w = change_user_password(uid, current_pwd, new_pwd)
+                        if ok_w:
+                            st.success("✅ Password changed successfully! Plain text was never stored.")
+                        else:
+                            st.error(f"❌ {msg_w}")
 
-        st.markdown("---")
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
         # Card 3: Account Sign Out
         if st.button("🚪 Log Out of AI Tutor", type="secondary", use_container_width=True, key="acc_details_logout"):
