@@ -2,7 +2,8 @@
 
 > **Covers Class 1 to Class 12 — from basic counting to calculus basics**
 
-> **Live Demo:** *(link will be added after deployment in Phase 8)*
+> **GitHub Repository:** [github.com/namanshukla93/ai-math-tutor](https://github.com/namanshukla93/ai-math-tutor)  
+> **Live Demo:** Deployable on Streamlit Community Cloud (free 24/7 hosting)
 
 ---
 
