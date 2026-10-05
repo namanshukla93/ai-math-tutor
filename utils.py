@@ -189,6 +189,70 @@ def get_gemini_response(
 
 
 # ─────────────────────────────────────────────
+# 2B. STREAMING TUTOR RESPONSE (generate_content_stream)
+# ─────────────────────────────────────────────
+
+def get_gemini_stream(
+    api_key: str,
+    system_prompt: str,
+    chat_history: list,
+    user_message: str,
+):
+    """
+    Streams the response from Gemini token-by-token using generate_content_stream.
+    Yields string chunks for real-time typing effect with st.write_stream.
+    """
+    try:
+        client = genai.Client(api_key=api_key)
+
+        contents = []
+        for msg in chat_history:
+            contents.append(
+                types.Content(
+                    role=msg["role"],
+                    parts=[types.Part(text=msg["parts"][0])]
+                )
+            )
+
+        contents.append(
+            types.Content(
+                role="user",
+                parts=[types.Part(text=user_message)]
+            )
+        )
+
+        response_stream = client.models.generate_content_stream(
+            model=GEMINI_MODEL,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0.7,
+                max_output_tokens=1024,
+            ),
+        )
+
+        for chunk in response_stream:
+            # Extract text safely handling thought parts if any
+            if hasattr(chunk, "candidates") and chunk.candidates:
+                for candidate in chunk.candidates:
+                    if hasattr(candidate, "content") and candidate.content and candidate.content.parts:
+                        for part in candidate.content.parts:
+                            if not getattr(part, "thought", False) and part.text:
+                                yield part.text
+            elif hasattr(chunk, "text") and chunk.text:
+                yield chunk.text
+
+    except Exception as e:
+        err = str(e).lower()
+        if "quota" in err or "429" in err:
+            yield "\n\n⚠️ *API usage limit reached. Please wait a moment and try again.*"
+        elif "api_key" in err or "401" in err:
+            yield "\n\n⚠️ *Invalid API key. Please check your GEMINI_API_KEY.*"
+        else:
+            yield f"\n\n⚠️ *Error reaching AI Tutor: {str(e)[:120]}*"
+
+
+# ─────────────────────────────────────────────
 # 3. GENERATE PARENT SUMMARY
 # ─────────────────────────────────────────────
 

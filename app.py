@@ -3,16 +3,15 @@
 # Creator: Naman Shukla (ramanshukla2005@gmail.com)
 # GitHub: https://github.com/namanshukla93/ai-math-tutor
 #
-# Highlights:
-#   - Name: "AI Tutor" (Bespoke identity, zero Streamlit branding)
-#   - Dynamic User Identity: Logged-in username & ID appears across the entire interface
-#   - Dedicated "About" section: Creator details (Naman Shukla) & Product specification
-#   - Aesthetic & Ultra-Clean UI: Warm luxury dark canvas with terracotta accents
-#   - Navigation: 💬 Chat, 📁 Projects, 💻 Code, 📄 Artifacts, ℹ️ About
-#   - Profile Menu (Settings, Font Style, Problem Solved Notifications, Focus Stopwatch, Logout/Login)
+# Features:
+#   - Name: "AI Tutor" (Zero Streamlit branding, 100% bespoke identity)
+#   - Dynamic User Identity: Logged-in username & ID appears across entire UI
+#   - Real-time Streaming: Token-by-token streaming using st.write_stream & generate_content_stream
+#   - Sidebar Multi-Session History: "➕ Start new chat" + list of recent chats with titles
 #   - Multi-File Access: Images, PDFs, Text notes, Worksheets, Code
-#   - File Creation (Artifacts): Create & download printable worksheets, cheat sheets & solution sets
-#   - Teach-First (Detailed Solution) -> Auto-generated Similar Practice Question
+#   - Claude-Style Artifacts: Generate & download printable worksheets, cheat sheets & solution sets
+#   - Dedicated "About" section: Creator details (Naman Shukla) & Product specification
+#   - Profile Menu: Settings, Font Style, Problem Solved Notifications, Focus Stopwatch, Logout/Login
 
 import time
 import streamlit as st
@@ -20,6 +19,7 @@ from tutor_prompt import get_system_prompt
 from utils import (
     load_api_key,
     get_gemini_response,
+    get_gemini_stream,
     generate_parent_summary,
     extract_content_from_file,
     create_math_artifact,
@@ -42,11 +42,23 @@ st.set_page_config(
 # SESSION STATE INITIALIZATION
 # ─────────────────────────────────────────────
 
+if "chat_sessions" not in st.session_state:
+    st.session_state.chat_sessions = {
+        "Chat 1": {
+            "title": "Chat 1",
+            "messages": [],
+            "gemini_history": [],
+        }
+    }
+
+if "active_session_id" not in st.session_state:
+    st.session_state.active_session_id = "Chat 1"
+
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = st.session_state.chat_sessions["Chat 1"]["messages"]
 
 if "gemini_history" not in st.session_state:
-    st.session_state.gemini_history = []
+    st.session_state.gemini_history = st.session_state.chat_sessions["Chat 1"]["gemini_history"]
 
 if "class_level" not in st.session_state:
     st.session_state.class_level = 5
@@ -102,7 +114,7 @@ st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap');
 
-/* ── Completely Hide All Streamlit Branding & Menus ── */
+/* ── Completely Hide All Streamlit Branding & Chrome ── */
 #MainMenu {{visibility: hidden !important; display: none !important;}}
 footer {{visibility: hidden !important; display: none !important;}}
 header {{visibility: hidden !important; display: none !important;}}
@@ -132,7 +144,7 @@ html, body, [class*="css"], .stApp {{
     padding-bottom: 7rem !important;
 }}
 
-/* ── Bespoke Top Navigation Bar ── */
+/* ── Top Header ── */
 .top-header {{
     display: flex;
     align-items: center;
@@ -227,7 +239,7 @@ html, body, [class*="css"], .stApp {{
     line-height: 1.6;
 }}
 
-/* ── Suggestion Cards ── */
+/* ── Buttons ── */
 .stButton > button {{
     background: #1c1c22 !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -450,7 +462,7 @@ api_key, key_error = get_api_key()
 
 
 # ─────────────────────────────────────────────
-# HELPER: Send to Tutor
+# HELPER: Message and Session Sync
 # ─────────────────────────────────────────────
 
 def add_message(role: str, content: str, image=None, file_meta=None):
@@ -468,6 +480,11 @@ def add_message(role: str, content: str, image=None, file_meta=None):
         "role": gemini_role,
         "parts": [content],
     })
+    # Sync with active chat session
+    sid = st.session_state.active_session_id
+    if sid in st.session_state.chat_sessions:
+        st.session_state.chat_sessions[sid]["messages"] = st.session_state.messages
+        st.session_state.chat_sessions[sid]["gemini_history"] = st.session_state.gemini_history
 
 
 def send_to_tutor(user_text: str, image=None, file_meta=None):
@@ -486,6 +503,12 @@ def send_to_tutor(user_text: str, image=None, file_meta=None):
 
     add_message("assistant", reply)
 
+    # Auto-rename active chat session title if default
+    sid = st.session_state.active_session_id
+    if sid in st.session_state.chat_sessions:
+        if st.session_state.chat_sessions[sid]["title"].startswith("Chat "):
+            st.session_state.chat_sessions[sid]["title"] = user_text[:24] + ("..." if len(user_text) > 24 else "")
+
     if st.session_state.notify_solved:
         st.toast("🎯 Solution & practice problem prepared!", icon="⭐")
 
@@ -499,16 +522,48 @@ with st.sidebar:
 
     # 1. Start New Chat Button
     if st.button("➕ Start new chat", use_container_width=True, key="new_chat_btn"):
-        st.session_state.messages = []
-        st.session_state.gemini_history = []
+        new_sid = f"Chat {len(st.session_state.chat_sessions) + 1}"
+        st.session_state.chat_sessions[new_sid] = {
+            "title": new_sid,
+            "messages": [],
+            "gemini_history": [],
+        }
+        st.session_state.active_session_id = new_sid
+        st.session_state.messages = st.session_state.chat_sessions[new_sid]["messages"]
+        st.session_state.gemini_history = st.session_state.chat_sessions[new_sid]["gemini_history"]
         st.session_state.show_summary = False
         st.session_state.summary_text = ""
         st.session_state.active_nav = "💬 Chat"
         st.rerun()
 
-    st.markdown("")
+    # 2. Recent Chats List (Multi-Session History)
+    st.markdown("**📜 Recent Chats**")
+    for sid, sdata in list(st.session_state.chat_sessions.items()):
+        is_active = (sid == st.session_state.active_session_id)
+        display_title = sdata.get("title", sid)
+        col_c, col_d = st.columns([5, 1])
+        with col_c:
+            btn_text = f"👉 **{display_title}**" if is_active else f"💬 {display_title}"
+            if st.button(btn_text, key=f"sbtn_{sid}", use_container_width=True):
+                st.session_state.active_session_id = sid
+                st.session_state.messages = sdata["messages"]
+                st.session_state.gemini_history = sdata["gemini_history"]
+                st.session_state.active_nav = "💬 Chat"
+                st.rerun()
+        with col_d:
+            if len(st.session_state.chat_sessions) > 1:
+                if st.button("✕", key=f"del_{sid}", help="Delete chat"):
+                    del st.session_state.chat_sessions[sid]
+                    if sid == st.session_state.active_session_id:
+                        rem_id = list(st.session_state.chat_sessions.keys())[0]
+                        st.session_state.active_session_id = rem_id
+                        st.session_state.messages = st.session_state.chat_sessions[rem_id]["messages"]
+                        st.session_state.gemini_history = st.session_state.chat_sessions[rem_id]["gemini_history"]
+                    st.rerun()
 
-    # 2. Main Navigation Tabs
+    st.markdown("---")
+
+    # 3. Main Navigation Tabs
     nav_options = ["💬 Chat", "📁 Projects", "💻 Code", "📄 Artifacts", "ℹ️ About"]
     cur_idx = nav_options.index(st.session_state.active_nav) if st.session_state.active_nav in nav_options else 0
     st.session_state.active_nav = st.radio(
@@ -520,7 +575,7 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 3. Class Level Selector
+    # 4. Class Level Selector
     st.markdown("**🎓 Class Level**")
     new_class = st.selectbox(
         label="Select Class",
@@ -533,11 +588,13 @@ with st.sidebar:
         st.session_state.class_level = new_class
         st.session_state.messages = []
         st.session_state.gemini_history = []
+        st.session_state.chat_sessions[st.session_state.active_session_id]["messages"] = []
+        st.session_state.chat_sessions[st.session_state.active_session_id]["gemini_history"] = []
         st.session_state.show_summary = False
         st.session_state.summary_text = ""
         st.rerun()
 
-    # 4. Quick Session Summary
+    # 5. Quick Session Summary
     if st.button("📋 Session Summary", use_container_width=True):
         if key_error:
             st.error(key_error)
@@ -557,7 +614,7 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 5. USER PROFILE MENU (Tap to edit username, ID, font, notifications, focus)
+    # 6. USER PROFILE MENU (Tap to edit username, ID, font, notifications, focus)
     user_status_label = f"👤 {st.session_state.user_name}" if st.session_state.is_logged_in else "👤 Guest (Click to Log In)"
 
     with st.popover(user_status_label, use_container_width=True):
@@ -664,7 +721,7 @@ if key_error:
 
 
 # ─────────────────────────────────────────────
-# VIEW 1: 💬 CHAT (Main Conversational Tutor)
+# VIEW 1: 💬 CHAT (Main Conversational Tutor with Streaming)
 # ─────────────────────────────────────────────
 
 if st.session_state.active_nav == "💬 Chat":
@@ -746,7 +803,7 @@ if st.session_state.active_nav == "💬 Chat":
             unsafe_allow_html=True,
         )
 
-    # Floating Prompt Bar with Multi-File Upload
+    # Floating Prompt Bar with Multi-File Upload & Real-time Streaming
     chat_val = st.chat_input(
         placeholder=f"Ask any math doubt or attach photos, PDFs, worksheets...",
         accept_file=True,
@@ -764,6 +821,10 @@ if st.session_state.active_nav == "💬 Chat":
 
         if hasattr(chat_val, "files") and chat_val.files:
             uploaded_files = chat_val.files
+
+        file_meta = None
+        img_payload = None
+        full_query = user_text
 
         if uploaded_files:
             attached_file = uploaded_files[0]
@@ -785,25 +846,59 @@ if st.session_state.active_nav == "💬 Chat":
             file_meta = {"name": file_name, "type": ext.upper() or "Document"}
 
             if user_text:
-                full_prompt = (
+                full_query = (
                     f"{user_text}\n\n"
                     f"**Extracted Content from '{file_name}':**\n{extracted_text}\n\n"
                     f"Please provide the detailed step-by-step solution first, "
                     f"and then create a similar practice problem for me!"
                 )
             else:
-                full_prompt = (
+                full_query = (
                     f"I attached a file: **{file_name}**\n\n"
                     f"**Extracted Math Problem(s):**\n{extracted_text}\n\n"
                     f"Please provide the detailed step-by-step solution first, "
                     f"and then create a similar practice problem for me!"
                 )
 
-            send_to_tutor(full_prompt, image=img_payload, file_meta=file_meta)
-            st.rerun()
+        if full_query:
+            # 1. Display User Message Immediately
+            with st.chat_message("user", avatar="🧑‍🎓"):
+                st.caption(f"**{st.session_state.user_name}**")
+                if file_meta:
+                    st.markdown(
+                        f'<div class="file-chip">📎 Attached File: <b>{file_meta["name"]}</b> ({file_meta["type"]})</div>',
+                        unsafe_allow_html=True,
+                    )
+                if img_payload:
+                    st.image(img_payload, caption="📷 Attached Problem Image", width=340)
+                st.markdown(user_text if user_text else f"Attached: {file_meta['name']}")
 
-        elif user_text:
-            send_to_tutor(user_text)
+            add_message("user", full_query, image=img_payload, file_meta=file_meta)
+
+            # 2. Stream Assistant Response in Real-Time
+            with st.chat_message("assistant", avatar="📐"):
+                st.caption("**AI Tutor**")
+                system_prompt = get_system_prompt(st.session_state.class_level)
+                stream_gen = get_gemini_stream(
+                    api_key=api_key,
+                    system_prompt=system_prompt,
+                    chat_history=st.session_state.gemini_history[:-1],
+                    user_message=full_query,
+                )
+                full_reply = st.write_stream(stream_gen)
+
+            add_message("assistant", full_reply)
+
+            # Auto-title chat session
+            sid = st.session_state.active_session_id
+            if sid in st.session_state.chat_sessions:
+                if st.session_state.chat_sessions[sid]["title"].startswith("Chat "):
+                    display_title = user_text if user_text else (file_meta["name"] if file_meta else "Math Problem")
+                    st.session_state.chat_sessions[sid]["title"] = display_title[:24] + ("..." if len(display_title) > 24 else "")
+
+            if st.session_state.notify_solved:
+                st.toast("🎯 Solution & practice problem prepared!", icon="⭐")
+
             st.rerun()
 
 
@@ -990,10 +1085,12 @@ elif st.session_state.active_nav == "ℹ️ About":
         <div class="profile-card">
             <h3 style="color:#fbfbfa; margin-top:0;">⚡ Product Architecture & Highlights</h3>
             <ul style="color:#d4d4d8; font-size:0.95rem; line-height:1.8;">
-                <li><b>Two-Step Pedagogical Engine:</b> Unlike conventional AI that merely dumps answers, AI Tutor walks students through each calculation step conceptually, and then automatically synthesizes a similar problem for active self-testing.</li>
-                <li><b>Universal Multimodal Perception:</b> Processes images (handwritten notebook photos, textbook snapshots), PDF worksheets, and raw text files via Google Gemini Vision.</li>
+                <li><b>Two-Step Pedagogical Engine:</b> Walk students through each calculation step conceptually, and then automatically synthesize a similar problem for active self-testing.</li>
+                <li><b>Real-time Streaming Engine:</b> Token-by-token response streaming with <code>generate_content_stream</code> and <code>st.write_stream</code>.</li>
+                <li><b>Multi-Session Chat History:</b> Manage multiple chat conversations with auto-titles, switching, and deletion directly from the sidebar.</li>
+                <li><b>Universal Multimodal Perception:</b> Process images, PDF worksheets, and raw text files via Google Gemini Vision.</li>
                 <li><b>Claude-Style Artifacts System:</b> On-demand creation of printable practice worksheets, formula cheat sheets, and solved problem sets downloadable as standard Markdown documents.</li>
-                <li><b>Dynamic Grade Adaptation:</b> Adjusts vocabulary, tone, and CBSE/NCERT curriculum benchmarks across 4 age bands (Class 1–3, 4–6, 7–10, 11–12).</li>
+                <li><b>Dynamic Grade Adaptation:</b> Adjust vocabulary, tone, and CBSE/NCERT curriculum benchmarks across 4 age bands (Class 1–3, 4–6, 7–10, 11–12).</li>
                 <li><b>Bespoke Dark Aesthetic:</b> Distraction-free, responsive dark canvas with dynamic typography switching and zero platform watermarks.</li>
             </ul>
         </div>
