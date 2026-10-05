@@ -31,9 +31,18 @@ from auth_db import (
     init_db,
     register_user,
     authenticate_user,
+    get_user_details,
+    update_user_profile,
+    change_user_password,
+    get_user_chats,
+    create_db_chat,
+    update_db_chat_title,
+    delete_db_chat,
+    save_db_message,
+    get_db_messages,
 )
 
-# Initialize SQLite database for users
+# Initialize SQLite database for users & persistent chat history
 init_db()
 
 
@@ -476,11 +485,51 @@ api_key, key_error = get_api_key()
 
 
 # ─────────────────────────────────────────────
-# HELPER: Message and Session Sync
+# HELPER: Message and Session Sync (SQLite Persistent)
 # ─────────────────────────────────────────────
 
+def load_user_sessions(user_id: int):
+    """Loads all saved chat sessions from SQLite database for the user."""
+    db_chats = get_user_chats(user_id)
+    st.session_state.chat_sessions = {}
+    if db_chats:
+        for c in db_chats:
+            st.session_state.chat_sessions[c["id"]] = {
+                "title": c["title"],
+                "created_at": c.get("created_at", ""),
+                "updated_at": c.get("updated_at", ""),
+                "messages": [],
+                "gemini_history": [],
+                "loaded": False,
+            }
+        first_cid = db_chats[0]["id"]
+    else:
+        first_cid = f"chat_{user_id}_{int(time.time())}"
+        create_db_chat(user_id, first_cid, "New Chat")
+        st.session_state.chat_sessions[first_cid] = {
+            "title": "New Chat",
+            "created_at": "Just now",
+            "updated_at": "Just now",
+            "messages": [],
+            "gemini_history": [],
+            "loaded": True,
+        }
+
+    st.session_state.active_session_id = first_cid
+    # Load messages for the active session
+    msgs = get_db_messages(first_cid, user_id)
+    st.session_state.messages = msgs
+    st.session_state.gemini_history = [
+        {"role": "model" if m["role"] == "assistant" else "user", "parts": [m["content"]]}
+        for m in msgs
+    ]
+    st.session_state.chat_sessions[first_cid]["messages"] = st.session_state.messages
+    st.session_state.chat_sessions[first_cid]["gemini_history"] = st.session_state.gemini_history
+    st.session_state.chat_sessions[first_cid]["loaded"] = True
+
+
 def add_message(role: str, content: str, image=None, file_meta=None):
-    """Save message for display and Gemini context."""
+    """Save message for display, Gemini context, and SQLite persistent history."""
     author = st.session_state.user_name if role == "user" else "AI Tutor"
     st.session_state.messages.append({
         "role": role,
@@ -494,11 +543,16 @@ def add_message(role: str, content: str, image=None, file_meta=None):
         "role": gemini_role,
         "parts": [content],
     })
-    # Sync with active chat session
+    # Sync with active chat session in session state
     sid = st.session_state.active_session_id
     if sid in st.session_state.chat_sessions:
         st.session_state.chat_sessions[sid]["messages"] = st.session_state.messages
         st.session_state.chat_sessions[sid]["gemini_history"] = st.session_state.gemini_history
+
+    # Persist message to SQLite users.db
+    uid = st.session_state.get("user_id")
+    if uid and sid:
+        save_db_message(sid, uid, role, content, author)
 
 
 def send_to_tutor(user_text: str, image=None, file_meta=None):
@@ -517,11 +571,16 @@ def send_to_tutor(user_text: str, image=None, file_meta=None):
 
     add_message("assistant", reply)
 
-    # Auto-rename active chat session title if default
+    # Auto-rename active chat session title in session state & SQLite
     sid = st.session_state.active_session_id
+    uid = st.session_state.get("user_id")
     if sid in st.session_state.chat_sessions:
-        if st.session_state.chat_sessions[sid]["title"].startswith("Chat "):
-            st.session_state.chat_sessions[sid]["title"] = user_text[:24] + ("..." if len(user_text) > 24 else "")
+        curr_t = st.session_state.chat_sessions[sid]["title"]
+        if curr_t.startswith("Chat ") or curr_t == "New Chat":
+            new_title = user_text[:28].strip() + ("..." if len(user_text) > 28 else "")
+            st.session_state.chat_sessions[sid]["title"] = new_title
+            if uid:
+                update_db_chat_title(sid, uid, new_title)
 
     if st.session_state.notify_solved:
         st.toast("🎯 Solution & practice problem prepared!", icon="⭐")
@@ -567,6 +626,7 @@ if not st.session_state.is_logged_in:
                             st.session_state.user_email = user_data["email"]
                             st.session_state.class_level = user_data.get("class_level", 8)
                             st.session_state.user_id = user_data["id"]
+                            load_user_sessions(user_data["id"])
                             st.success(f"✅ Welcome back, {user_data['name']}! Loading workspace...")
                             time.sleep(0.3)
                             st.rerun()
@@ -590,6 +650,7 @@ if not st.session_state.is_logged_in:
                     st.session_state.user_email = user_data["email"]
                     st.session_state.class_level = user_data.get("class_level", 10)
                     st.session_state.user_id = user_data["id"]
+                    load_user_sessions(user_data["id"])
                     st.rerun()
 
         with tab_signup:
@@ -621,6 +682,7 @@ if not st.session_state.is_logged_in:
                                 st.session_state.user_email = udata["email"]
                                 st.session_state.class_level = udata.get("class_level", reg_class)
                                 st.session_state.user_id = udata["id"]
+                                load_user_sessions(udata["id"])
                                 st.success("🎉 Account created successfully! Launching AI Tutor...")
                                 time.sleep(0.4)
                                 st.rerun()
@@ -632,6 +694,10 @@ if not st.session_state.is_logged_in:
     # Stop execution: Ensure NO chat, projects, or tutor features are accessible while logged out!
     st.stop()
 
+# Ensure sessions are loaded if logged in
+if st.session_state.is_logged_in and (not st.session_state.chat_sessions or not any(st.session_state.chat_sessions.values())):
+    load_user_sessions(st.session_state.user_id)
+
 
 # ─────────────────────────────────────────────
 # SIDEBAR NAVIGATION & PROFILE SETTINGS
@@ -640,31 +706,43 @@ if not st.session_state.is_logged_in:
 with st.sidebar:
     st.markdown("### 📐 AI Tutor")
 
+    uid = st.session_state.get("user_id", 1)
+
     # 1. Start New Chat Button
     if st.button("➕ Start new chat", use_container_width=True, key="new_chat_btn"):
-        new_sid = f"Chat {len(st.session_state.chat_sessions) + 1}"
+        new_sid = f"chat_{uid}_{int(time.time())}"
+        create_db_chat(uid, new_sid, "New Chat")
         st.session_state.chat_sessions[new_sid] = {
-            "title": new_sid,
+            "title": "New Chat",
             "messages": [],
             "gemini_history": [],
+            "loaded": True,
         }
         st.session_state.active_session_id = new_sid
-        st.session_state.messages = st.session_state.chat_sessions[new_sid]["messages"]
-        st.session_state.gemini_history = st.session_state.chat_sessions[new_sid]["gemini_history"]
+        st.session_state.messages = []
+        st.session_state.gemini_history = []
         st.session_state.show_summary = False
         st.session_state.summary_text = ""
         st.session_state.active_nav = "💬 Chat"
         st.rerun()
 
-    # 2. Recent Chats List (Multi-Session History)
+    # 2. Recent Chats List (Persistent SQLite History)
     st.markdown("**📜 Recent Chats**")
     for sid, sdata in list(st.session_state.chat_sessions.items()):
         is_active = (sid == st.session_state.active_session_id)
-        display_title = sdata.get("title", sid)
+        display_title = sdata.get("title", "Chat")
         col_c, col_d = st.columns([5, 1])
         with col_c:
             btn_text = f"👉 **{display_title}**" if is_active else f"💬 {display_title}"
             if st.button(btn_text, key=f"sbtn_{sid}", use_container_width=True):
+                if not sdata.get("loaded", False):
+                    msgs = get_db_messages(sid, uid)
+                    sdata["messages"] = msgs
+                    sdata["gemini_history"] = [
+                        {"role": "model" if m["role"] == "assistant" else "user", "parts": [m["content"]]}
+                        for m in msgs
+                    ]
+                    sdata["loaded"] = True
                 st.session_state.active_session_id = sid
                 st.session_state.messages = sdata["messages"]
                 st.session_state.gemini_history = sdata["gemini_history"]
@@ -673,18 +751,35 @@ with st.sidebar:
         with col_d:
             if len(st.session_state.chat_sessions) > 1:
                 if st.button("✕", key=f"del_{sid}", help="Delete chat"):
+                    delete_db_chat(sid, uid)
                     del st.session_state.chat_sessions[sid]
                     if sid == st.session_state.active_session_id:
                         rem_id = list(st.session_state.chat_sessions.keys())[0]
                         st.session_state.active_session_id = rem_id
+                        if not st.session_state.chat_sessions[rem_id].get("loaded", False):
+                            msgs = get_db_messages(rem_id, uid)
+                            st.session_state.chat_sessions[rem_id]["messages"] = msgs
+                            st.session_state.chat_sessions[rem_id]["gemini_history"] = [
+                                {"role": "model" if m["role"] == "assistant" else "user", "parts": [m["content"]]}
+                                for m in msgs
+                            ]
+                            st.session_state.chat_sessions[rem_id]["loaded"] = True
                         st.session_state.messages = st.session_state.chat_sessions[rem_id]["messages"]
                         st.session_state.gemini_history = st.session_state.chat_sessions[rem_id]["gemini_history"]
                     st.rerun()
 
     st.markdown("---")
 
-    # 3. Main Navigation Tabs
-    nav_options = ["💬 Chat", "📁 Projects", "💻 Code", "📄 Artifacts", "ℹ️ About"]
+    # 3. Main Navigation Tabs (Includes Chat History & Account Details)
+    nav_options = [
+        "💬 Chat",
+        "📜 Chat History",
+        "👤 Account Details",
+        "📁 Projects",
+        "💻 Code",
+        "📄 Artifacts",
+        "ℹ️ About",
+    ]
     cur_idx = nav_options.index(st.session_state.active_nav) if st.session_state.active_nav in nav_options else 0
     st.session_state.active_nav = st.radio(
         label="Navigation",
@@ -706,10 +801,7 @@ with st.sidebar:
     )
     if new_class != st.session_state.class_level:
         st.session_state.class_level = new_class
-        st.session_state.messages = []
-        st.session_state.gemini_history = []
-        st.session_state.chat_sessions[st.session_state.active_session_id]["messages"] = []
-        st.session_state.chat_sessions[st.session_state.active_session_id]["gemini_history"] = []
+        update_user_profile(uid, st.session_state.user_name, new_class)
         st.session_state.show_summary = False
         st.session_state.summary_text = ""
         st.rerun()
@@ -734,26 +826,14 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 6. USER PROFILE MENU (Tap to edit username, ID, font, notifications, focus)
-    user_status_label = f"👤 {st.session_state.user_name}" if st.session_state.is_logged_in else "👤 Guest (Click to Log In)"
-
-    with st.popover(user_status_label, use_container_width=True):
-        st.markdown("#### ⚙️ Profile & Settings")
+    # 6. Quick Preferences Popover
+    with st.popover("⚙️ Quick Settings", use_container_width=True):
+        st.markdown("#### ⚙️ Reading & Focus")
         
-        # User details inputs
-        edit_name = st.text_input("Username:", value=st.session_state.user_name)
-        edit_email = st.text_input("User Email / ID:", value=st.session_state.user_email)
-        if edit_name != st.session_state.user_name or edit_email != st.session_state.user_email:
-            st.session_state.user_name = edit_name.strip() if edit_name.strip() else "Student"
-            st.session_state.user_email = edit_email.strip() if edit_email.strip() else "user@math.edu"
-            st.rerun()
-
-        st.divider()
-
         # A. Font Style Selector
-        st.markdown("**🔤 Font Style**")
+        st.markdown("**🔤 Reading Font**")
         selected_font = st.selectbox(
-            "Change Reading Font:",
+            "Change Font:",
             options=["Modern Sans", "Classic Editorial", "Clean Mono"],
             index=["Modern Sans", "Classic Editorial", "Clean Mono"].index(st.session_state.font_style),
             label_visibility="collapsed",
@@ -783,27 +863,40 @@ with st.sidebar:
             st.session_state.focus_mode = focus_val
             st.rerun()
 
-        st.divider()
+    # 7. USER ACCOUNT CARD (Bottom of sidebar like Claude & ChatGPT)
+    initials = st.session_state.user_name[:2].upper() if st.session_state.user_name else "NS"
+    st.markdown(
+        f"""
+        <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 0.75rem 0.85rem; margin-top: 0.6rem; margin-bottom: 0.6rem;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #da7756, #c86544); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; font-size: 0.88rem; flex-shrink: 0;">
+                    {initials}
+                </div>
+                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <div style="font-weight: 600; color: #fbfbfa; font-size: 0.92rem; line-height: 1.2;">{st.session_state.user_name}</div>
+                    <div style="color: #9c9ca4; font-size: 0.78rem; line-height: 1.2;">{st.session_state.user_email}</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        # D. Logout Option
-        if st.button("🚪 Log Out", use_container_width=True, key="popover_logout_btn"):
+    btn_acc, btn_logout = st.columns([1.1, 1])
+    with btn_acc:
+        if st.button("👤 Account", key="side_account_nav_btn", use_container_width=True, help="View Account Details"):
+            st.session_state.active_nav = "👤 Account Details"
+            st.rerun()
+    with btn_logout:
+        if st.button("🚪 Logout", key="side_logout_direct_btn", use_container_width=True, help="Sign out"):
             st.session_state.is_logged_in = False
             st.session_state.user_name = ""
             st.session_state.user_email = ""
             st.session_state.user_id = None
             st.session_state.messages = []
             st.session_state.gemini_history = []
+            st.session_state.chat_sessions = {}
             st.rerun()
-
-    # Direct Sidebar Logout Button
-    if st.button("🚪 Log Out", key="sidebar_logout_direct", use_container_width=True):
-        st.session_state.is_logged_in = False
-        st.session_state.user_name = ""
-        st.session_state.user_email = ""
-        st.session_state.user_id = None
-        st.session_state.messages = []
-        st.session_state.gemini_history = []
-        st.rerun()
 
 
 # ─────────────────────────────────────────────
@@ -1035,6 +1128,208 @@ if st.session_state.active_nav == "💬 Chat":
             if st.session_state.notify_solved:
                 st.toast("🎯 Solution & practice problem prepared!", icon="⭐")
 
+            st.rerun()
+
+
+# ─────────────────────────────────────────────
+# VIEW: 📜 CHAT HISTORY (Persistent SQLite Archive)
+# ─────────────────────────────────────────────
+
+elif st.session_state.active_nav == "📜 Chat History":
+    uid = st.session_state.get("user_id")
+    all_chats = get_user_chats(uid) if uid else []
+
+    st.markdown("### 📜 Chat History & Past Tutoring Sessions")
+    st.caption("Review, search, and resume your past math problems, step-by-step solutions, and practice sets.")
+
+    top_c1, top_c2 = st.columns([3, 1])
+    with top_c1:
+        search_query = st.text_input("🔍 Search past topics & questions:", placeholder="e.g. Fractions, Trigonometry, Linear equations...", label_visibility="collapsed")
+    with top_c2:
+        if st.button("➕ Start New Chat", type="primary", use_container_width=True, key="hist_start_new_btn"):
+            new_cid = f"chat_{uid}_{int(time.time())}"
+            create_db_chat(uid, new_cid, "New Chat")
+            st.session_state.chat_sessions[new_cid] = {
+                "title": "New Chat",
+                "created_at": "Just now",
+                "updated_at": "Just now",
+                "messages": [],
+                "gemini_history": [],
+                "loaded": True,
+            }
+            st.session_state.active_session_id = new_cid
+            st.session_state.messages = []
+            st.session_state.gemini_history = []
+            st.session_state.active_nav = "💬 Chat"
+            st.rerun()
+
+    filtered_chats = [c for c in all_chats if not search_query.strip() or search_query.strip().lower() in c["title"].lower()]
+
+    if not filtered_chats:
+        st.info("No saved chat sessions found. Start a new chat to begin practicing!")
+    else:
+        for c in filtered_chats:
+            cid = c["id"]
+            ctitle = c["title"]
+            c_msgs = get_db_messages(cid, uid)
+            msg_count = len(c_msgs)
+            last_active = c.get("updated_at", c.get("created_at", "Recently"))
+
+            with st.container():
+                st.markdown(
+                    f"""
+                    <div class="artifact-box" style="margin-bottom: 0.6rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <div class="artifact-box-title" style="font-size: 1.05rem;">💬 {ctitle}</div>
+                                <div class="artifact-box-desc" style="margin-top: 0.3rem;">
+                                    <span>⏱️ <b>{last_active}</b></span> &nbsp;•&nbsp; 
+                                    <span>💬 <b>{msg_count}</b> messages</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                col_res, col_del = st.columns([4, 1])
+                with col_res:
+                    if st.button(f"Resume Chat: {ctitle[:30]} →", key=f"hist_resume_{cid}", use_container_width=True):
+                        st.session_state.active_session_id = cid
+                        st.session_state.messages = c_msgs
+                        st.session_state.gemini_history = [
+                            {"role": "model" if m["role"] == "assistant" else "user", "parts": [m["content"]]}
+                            for m in c_msgs
+                        ]
+                        if cid in st.session_state.chat_sessions:
+                            st.session_state.chat_sessions[cid]["messages"] = st.session_state.messages
+                            st.session_state.chat_sessions[cid]["gemini_history"] = st.session_state.gemini_history
+                            st.session_state.chat_sessions[cid]["loaded"] = True
+                        st.session_state.active_nav = "💬 Chat"
+                        st.rerun()
+                with col_del:
+                    if st.button("🗑️ Delete", key=f"hist_del_{cid}", use_container_width=True):
+                        delete_db_chat(cid, uid)
+                        if cid in st.session_state.chat_sessions:
+                            del st.session_state.chat_sessions[cid]
+                        if cid == st.session_state.active_session_id:
+                            load_user_sessions(uid)
+                        st.toast("Chat deleted permanently.")
+                        st.rerun()
+
+
+# ─────────────────────────────────────────────
+# VIEW: 👤 ACCOUNT DETAILS (Profile, Grade & Security)
+# ─────────────────────────────────────────────
+
+elif st.session_state.active_nav == "👤 Account Details":
+    uid = st.session_state.get("user_id")
+    user_info = get_user_details(uid) if uid else None
+
+    st.markdown("### 👤 Account Details & Preferences")
+    st.caption("Manage your student profile, academic grade level, security password, and tutor preferences.")
+
+    col_l, col_r = st.columns([1.1, 1.4])
+
+    with col_l:
+        # Profile Summary Card
+        initials = (st.session_state.user_name[:2].upper() if st.session_state.user_name else "NS")
+        member_since = user_info.get("created_at", "October 2026") if user_info else "October 2026"
+        total_chats = user_info.get("total_chats", len(st.session_state.chat_sessions)) if user_info else 0
+        total_questions = user_info.get("total_questions", 0) if user_info else 0
+
+        st.markdown(
+            f"""
+            <div class="profile-card" style="text-align: center; padding: 2rem 1.2rem;">
+                <div style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #da7756, #c86544); display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; font-size: 1.8rem; margin: 0 auto 1rem auto; box-shadow: 0 8px 24px rgba(218, 119, 86, 0.3);">
+                    {initials}
+                </div>
+                <h3 style="color: #fbfbfa; margin: 0 0 0.2rem 0; font-size: 1.4rem;">{st.session_state.user_name}</h3>
+                <div style="color: #9c9ca4; font-size: 0.9rem; margin-bottom: 0.8rem;">{st.session_state.user_email}</div>
+                <div style="display: inline-block; background: rgba(218, 119, 86, 0.15); border: 1px solid rgba(218, 119, 86, 0.4); border-radius: 20px; padding: 0.3rem 0.9rem; font-size: 0.82rem; font-weight: 600; color: #e5987d; margin-bottom: 1.5rem;">
+                    🎓 Student Scholar • Class {st.session_state.class_level}
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; text-align: left; margin-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 1.2rem;">
+                    <div style="background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 0.7rem;">
+                        <div style="color: #8c8c96; font-size: 0.78rem;">Total Chats</div>
+                        <div style="color: #fbfbfa; font-size: 1.2rem; font-weight: 700;">{total_chats}</div>
+                    </div>
+                    <div style="background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 0.7rem;">
+                        <div style="color: #8c8c96; font-size: 0.78rem;">Questions Asked</div>
+                        <div style="color: #fbfbfa; font-size: 1.2rem; font-weight: 700;">{total_questions}</div>
+                    </div>
+                </div>
+                <div style="color: #8c8c96; font-size: 0.8rem; margin-top: 1rem;">
+                    Member Since: <b>{member_since}</b>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with col_r:
+        # Card 1: Edit Profile Details
+        st.markdown("#### ✏️ Edit Profile Details")
+        with st.form("edit_profile_form"):
+            new_name = st.text_input("Full Name:", value=st.session_state.user_name)
+            new_class_choice = st.selectbox(
+                "School Class / Grade Level:",
+                options=list(range(1, 13)),
+                index=st.session_state.class_level - 1,
+                format_func=lambda x: f"Class {x} (CBSE/NCERT)",
+            )
+            save_profile_btn = st.form_submit_button("💾 Save Profile Changes", type="primary", use_container_width=True)
+
+            if save_profile_btn:
+                if not new_name.strip():
+                    st.error("Name cannot be empty.")
+                else:
+                    ok_p, msg_p = update_user_profile(uid, new_name, new_class_choice)
+                    if ok_p:
+                        st.session_state.user_name = new_name.strip()
+                        st.session_state.class_level = new_class_choice
+                        st.success("✅ Profile updated successfully!")
+                        time.sleep(0.3)
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {msg_p}")
+
+        st.markdown("---")
+
+        # Card 2: Security & Password Update
+        st.markdown("#### 🔒 Security & Password")
+        with st.form("change_pwd_form"):
+            current_pwd = st.text_input("Current Password:", type="password", placeholder="••••••••")
+            new_pwd = st.text_input("New Password:", type="password", placeholder="Min 6 characters")
+            confirm_new_pwd = st.text_input("Confirm New Password:", type="password", placeholder="Re-enter new password")
+            save_pwd_btn = st.form_submit_button("🔑 Update Password", use_container_width=True)
+
+            if save_pwd_btn:
+                if not current_pwd or not new_pwd:
+                    st.error("Please enter both current and new password.")
+                elif len(new_pwd) < 6:
+                    st.error("New password must be at least 6 characters.")
+                elif new_pwd != confirm_new_pwd:
+                    st.error("New passwords do not match.")
+                else:
+                    ok_w, msg_w = change_user_password(uid, current_pwd, new_pwd)
+                    if ok_w:
+                        st.success("✅ Password changed successfully! Plain text was never stored.")
+                    else:
+                        st.error(f"❌ {msg_w}")
+
+        st.markdown("---")
+
+        # Card 3: Account Sign Out
+        if st.button("🚪 Log Out of AI Tutor", type="secondary", use_container_width=True, key="acc_details_logout"):
+            st.session_state.is_logged_in = False
+            st.session_state.user_name = ""
+            st.session_state.user_email = ""
+            st.session_state.user_id = None
+            st.session_state.messages = []
+            st.session_state.gemini_history = []
+            st.session_state.chat_sessions = {}
             st.rerun()
 
 
