@@ -27,6 +27,14 @@ from utils import (
     GENAI_ERROR,
     GENAI_BACKEND,
 )
+from auth_db import (
+    init_db,
+    register_user,
+    authenticate_user,
+)
+
+# Initialize SQLite database for users
+init_db()
 
 
 # ─────────────────────────────────────────────
@@ -72,15 +80,18 @@ if "artifacts" not in st.session_state:
 if "active_nav" not in st.session_state:
     st.session_state.active_nav = "💬 Chat"
 
-# User Identity & Profile State
+# User Identity & Profile State (Authenticated via SQLite users.db)
 if "user_name" not in st.session_state:
-    st.session_state.user_name = "Naman Shukla"
+    st.session_state.user_name = ""
 
 if "user_email" not in st.session_state:
-    st.session_state.user_email = "ramanshukla2005@gmail.com"
+    st.session_state.user_email = ""
+
+if "user_id" not in st.session_state:
+    st.session_state.user_id = None
 
 if "is_logged_in" not in st.session_state:
-    st.session_state.is_logged_in = True
+    st.session_state.is_logged_in = False
 
 if "font_style" not in st.session_state:
     st.session_state.font_style = "Modern Sans"
@@ -517,6 +528,112 @@ def send_to_tutor(user_text: str, image=None, file_meta=None):
 
 
 # ─────────────────────────────────────────────
+# AUTHENTICATION GATEWAY (LOGIN / SIGN UP SCREEN)
+# ─────────────────────────────────────────────
+
+if not st.session_state.is_logged_in:
+    st.markdown(
+        """
+        <div style="text-align: center; margin-top: 1.5rem; margin-bottom: 2rem;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 68px; height: 68px; border-radius: 20px; background: rgba(217, 119, 87, 0.15); border: 1px solid rgba(217, 119, 87, 0.4); font-size: 34px; margin-bottom: 1.1rem; box-shadow: 0 10px 30px rgba(217, 119, 87, 0.25);">📐</div>
+            <h1 style="font-size: 2.3rem; font-weight: 800; color: #f5f5f7; margin: 0; letter-spacing: -0.03em;">AI Math Tutor</h1>
+            <p style="color: #9c9ca4; font-size: 1.05rem; margin-top: 0.6rem; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+                Master mathematics with step-by-step conceptual explanations, personalized practice problems, and your private workspace.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    auth_col1, auth_col2, auth_col3 = st.columns([1, 2.6, 1])
+    with auth_col2:
+        tab_login, tab_signup = st.tabs(["🔑 Log In", "✨ Create Account"])
+
+        with tab_login:
+            st.markdown("<p style='color: #8c8c96; font-size: 0.9rem; margin-top: 0.5rem; margin-bottom: 1rem;'>Enter your email and password to access your tutoring sessions.</p>", unsafe_allow_html=True)
+            with st.form("login_form", clear_on_submit=False):
+                login_email = st.text_input("Email Address", placeholder="name@example.com")
+                login_password = st.text_input("Password", type="password", placeholder="••••••••")
+                submit_login = st.form_submit_button("Sign In →", use_container_width=True, type="primary")
+
+                if submit_login:
+                    if not login_email.strip() or not login_password.strip():
+                        st.error("⚠️ Please enter both your email and password.")
+                    else:
+                        success, user_data, msg = authenticate_user(login_email, login_password)
+                        if success and user_data:
+                            st.session_state.is_logged_in = True
+                            st.session_state.user_name = user_data["name"]
+                            st.session_state.user_email = user_data["email"]
+                            st.session_state.class_level = user_data.get("class_level", 8)
+                            st.session_state.user_id = user_data["id"]
+                            st.success(f"✅ Welcome back, {user_data['name']}! Loading workspace...")
+                            time.sleep(0.3)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {msg}")
+
+            st.markdown(
+                """
+                <div style="background: rgba(217, 119, 87, 0.08); border: 1px dashed rgba(217, 119, 87, 0.35); border-radius: 12px; padding: 0.85rem 1rem; margin-top: 1.2rem; font-size: 0.85rem; color: #e0947c;">
+                    <b>💡 Demo Account:</b><br/>
+                    Email: <code>ramanshukla2005@gmail.com</code> &nbsp;•&nbsp; Password: <code>naman123</code>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if st.button("🚀 Fast Login as Naman Shukla", use_container_width=True, key="fast_demo_login"):
+                success, user_data, msg = authenticate_user("ramanshukla2005@gmail.com", "naman123")
+                if success and user_data:
+                    st.session_state.is_logged_in = True
+                    st.session_state.user_name = user_data["name"]
+                    st.session_state.user_email = user_data["email"]
+                    st.session_state.class_level = user_data.get("class_level", 10)
+                    st.session_state.user_id = user_data["id"]
+                    st.rerun()
+
+        with tab_signup:
+            st.markdown("<p style='color: #8c8c96; font-size: 0.9rem; margin-top: 0.5rem; margin-bottom: 1rem;'>Create a free account to track your math progress and worksheets.</p>", unsafe_allow_html=True)
+            with st.form("signup_form", clear_on_submit=False):
+                reg_name = st.text_input("Full Name", placeholder="e.g. Naman Shukla")
+                reg_email = st.text_input("Email Address", placeholder="name@example.com")
+                reg_class = st.selectbox("Select Your School Class:", options=list(range(1, 13)), index=7, help="Adjusts math difficulty and curriculum")
+                reg_password = st.text_input("Create Password", type="password", placeholder="At least 6 characters")
+                reg_confirm = st.text_input("Confirm Password", type="password", placeholder="Re-enter password")
+                submit_signup = st.form_submit_button("Create Account ✨", use_container_width=True, type="primary")
+
+                if submit_signup:
+                    if not reg_name.strip():
+                        st.error("⚠️ Please enter your full name.")
+                    elif not reg_email.strip() or "@" not in reg_email or "." not in reg_email:
+                        st.error("⚠️ Please enter a valid email address.")
+                    elif len(reg_password) < 6:
+                        st.error("⚠️ Password must be at least 6 characters long.")
+                    elif reg_password != reg_confirm:
+                        st.error("⚠️ Passwords do not match. Please verify and try again.")
+                    else:
+                        created, reg_msg = register_user(reg_name, reg_email, reg_password, reg_class)
+                        if created:
+                            ok, udata, _ = authenticate_user(reg_email, reg_password)
+                            if ok and udata:
+                                st.session_state.is_logged_in = True
+                                st.session_state.user_name = udata["name"]
+                                st.session_state.user_email = udata["email"]
+                                st.session_state.class_level = udata.get("class_level", reg_class)
+                                st.session_state.user_id = udata["id"]
+                                st.success("🎉 Account created successfully! Launching AI Tutor...")
+                                time.sleep(0.4)
+                                st.rerun()
+                            else:
+                                st.success(reg_msg)
+                        else:
+                            st.error(f"❌ {reg_msg}")
+
+    # Stop execution: Ensure NO chat, projects, or tutor features are accessible while logged out!
+    st.stop()
+
+
+# ─────────────────────────────────────────────
 # SIDEBAR NAVIGATION & PROFILE SETTINGS
 # ─────────────────────────────────────────────
 
@@ -668,19 +785,25 @@ with st.sidebar:
 
         st.divider()
 
-        # D. Logout / Login Option
-        if st.session_state.is_logged_in:
-            if st.button("🚪 Log Out", use_container_width=True):
-                st.session_state.is_logged_in = False
-                st.session_state.user_name = "Guest"
-                st.session_state.user_email = "guest@math.edu"
-                st.rerun()
-        else:
-            if st.button("🔑 Log In as Naman Shukla", use_container_width=True):
-                st.session_state.is_logged_in = True
-                st.session_state.user_name = "Naman Shukla"
-                st.session_state.user_email = "ramanshukla2005@gmail.com"
-                st.rerun()
+        # D. Logout Option
+        if st.button("🚪 Log Out", use_container_width=True, key="popover_logout_btn"):
+            st.session_state.is_logged_in = False
+            st.session_state.user_name = ""
+            st.session_state.user_email = ""
+            st.session_state.user_id = None
+            st.session_state.messages = []
+            st.session_state.gemini_history = []
+            st.rerun()
+
+    # Direct Sidebar Logout Button
+    if st.button("🚪 Log Out", key="sidebar_logout_direct", use_container_width=True):
+        st.session_state.is_logged_in = False
+        st.session_state.user_name = ""
+        st.session_state.user_email = ""
+        st.session_state.user_id = None
+        st.session_state.messages = []
+        st.session_state.gemini_history = []
+        st.rerun()
 
 
 # ─────────────────────────────────────────────
