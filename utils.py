@@ -8,14 +8,38 @@
 #   app.py does not need to change at all. This is called "separation of concerns".
 #
 # NOTE ON PACKAGE:
-#   We use the NEW 'google-genai' package (not the old 'google-generativeai').
-#   The old one is deprecated (officially discontinued by Google).
-#   The new one is: from google import genai
+#   We primarily use the NEW 'google-genai' package (Python >= 3.10).
+#   We also provide graceful fallback to 'google-generativeai' and defensive
+#   error reporting so the app NEVER crashes with an unhandled ImportError.
 
 import os
-from google import genai
-from google.genai import types
 from dotenv import load_dotenv
+
+# Defensive Dual-Backend SDK Loader
+genai = None
+types = None
+genai_legacy = None
+GENAI_BACKEND = None
+GENAI_AVAILABLE = False
+GENAI_ERROR = None
+
+try:
+    from google import genai
+    from google.genai import types
+    GENAI_BACKEND = "google-genai"
+    GENAI_AVAILABLE = True
+except Exception as _e_new:
+    try:
+        import google.generativeai as genai_legacy
+        GENAI_BACKEND = "google-generativeai"
+        GENAI_AVAILABLE = True
+    except Exception as _e_legacy:
+        GENAI_BACKEND = None
+        GENAI_AVAILABLE = False
+        GENAI_ERROR = (
+            f"Could not import google-genai ({_e_new}) or google-generativeai ({_e_legacy}). "
+            "Please ensure Streamlit Cloud is configured to use Python 3.11."
+        )
 
 
 # ─────────────────────────────────────────────
@@ -105,64 +129,81 @@ def get_gemini_response(
       We build a list of Content objects (past messages) and send them along
       with the new message. Gemini sees the full conversation history and replies.
     """
-    try:
-        # Create the Gemini client with our API key
-        client = genai.Client(api_key=api_key)
+    if not GENAI_AVAILABLE:
+        return (
+            "⚠️ **Gemini SDK is not available in this environment.**\n\n"
+            f"Details: `{GENAI_ERROR}`\n\n"
+            "Please ensure Streamlit Cloud is set to Python 3.11 and click 'Reboot app'."
+        )
 
-        # Convert our stored history into Gemini's Content format
-        # Each item in chat_history looks like:
-        #   {"role": "user" or "model", "parts": ["message text"]}
-        contents = []
-        for msg in chat_history:
+    try:
+        if GENAI_BACKEND == "google-genai":
+            # Create the Gemini client with our API key
+            client = genai.Client(api_key=api_key)
+
+            # Convert our stored history into Gemini's Content format
+            contents = []
+            for msg in chat_history:
+                contents.append(
+                    types.Content(
+                        role=msg["role"],
+                        parts=[types.Part(text=msg["parts"][0])]
+                    )
+                )
+
+            # Add the new student message at the end
             contents.append(
                 types.Content(
-                    role=msg["role"],
-                    parts=[types.Part(text=msg["parts"][0])]
+                    role="user",
+                    parts=[types.Part(text=user_message)]
                 )
             )
 
-        # Add the new student message at the end
-        contents.append(
-            types.Content(
-                role="user",
-                parts=[types.Part(text=user_message)]
+            # Send to Gemini with the system prompt (tutor behavior rules)
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.7,   # Slightly creative but still consistent
+                    max_output_tokens=1024,  # Enough for a helpful hint, not too long
+                ),
             )
-        )
 
-        # Send to Gemini with the system prompt (tutor behavior rules)
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=contents,
-            config=types.GenerateContentConfig(
+            # Extract the text from the response.
+            text_parts = []
+            for candidate in response.candidates:
+                for part in candidate.content.parts:
+                    if not getattr(part, "thought", False) and part.text:
+                        text_parts.append(part.text)
+
+            if text_parts:
+                return "\n".join(text_parts)
+
+            if response.text:
+                return response.text
+
+            return "⚠️ The tutor didn't generate a response. Please try again."
+
+        elif GENAI_BACKEND == "google-generativeai":
+            genai_legacy.configure(api_key=api_key)
+            model = genai_legacy.GenerativeModel(
+                model_name="gemini-1.5-flash",
                 system_instruction=system_prompt,
-                temperature=0.7,   # Slightly creative but still consistent
-                max_output_tokens=1024,  # Enough for a helpful hint, not too long
-            ),
-        )
+            )
+            history = []
+            for msg in chat_history:
+                history.append({
+                    "role": "user" if msg["role"] == "user" else "model",
+                    "parts": msg["parts"],
+                })
+            chat = model.start_chat(history=history)
+            res = chat.send_message(user_message)
+            return res.text if res.text else "⚠️ Empty response received."
 
-        # Extract the text from the response.
-        # Some Gemini models ("thinking" models) return multiple parts:
-        # one "thought" part (internal reasoning) and one text part.
-        # response.text returns None if there are mixed parts, so we
-        # manually collect only the non-thought text parts.
-        text_parts = []
-        for candidate in response.candidates:
-            for part in candidate.content.parts:
-                if not part.thought and part.text:
-                    text_parts.append(part.text)
-
-        if text_parts:
-            return "\n".join(text_parts)
-
-        # Fallback: if the above somehow fails, try response.text directly
-        if response.text:
-            return response.text
-
-        return "⚠️ The tutor didn't generate a response. Please try again."
+        return "⚠️ No valid Gemini backend available."
 
     except Exception as e:
-        # Catch ANY error (network issue, invalid key, quota exceeded, etc.)
-        # and return a friendly message instead of showing a scary Python traceback
         error_msg = str(e).lower()
 
         if "api_key" in error_msg or "invalid" in error_msg or "401" in error_msg:
@@ -202,45 +243,71 @@ def get_gemini_stream(
     Streams the response from Gemini token-by-token using generate_content_stream.
     Yields string chunks for real-time typing effect with st.write_stream.
     """
-    try:
-        client = genai.Client(api_key=api_key)
+    if not GENAI_AVAILABLE:
+        yield (
+            "\n\n⚠️ **Gemini SDK is not available in this environment.**\n\n"
+            f"Details: `{GENAI_ERROR}`\n\n"
+            "Please ensure Streamlit Cloud is set to Python 3.11 and reboot your app."
+        )
+        return
 
-        contents = []
-        for msg in chat_history:
+    try:
+        if GENAI_BACKEND == "google-genai":
+            client = genai.Client(api_key=api_key)
+
+            contents = []
+            for msg in chat_history:
+                contents.append(
+                    types.Content(
+                        role=msg["role"],
+                        parts=[types.Part(text=msg["parts"][0])]
+                    )
+                )
+
             contents.append(
                 types.Content(
-                    role=msg["role"],
-                    parts=[types.Part(text=msg["parts"][0])]
+                    role="user",
+                    parts=[types.Part(text=user_message)]
                 )
             )
 
-        contents.append(
-            types.Content(
-                role="user",
-                parts=[types.Part(text=user_message)]
+            response_stream = client.models.generate_content_stream(
+                model=GEMINI_MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.7,
+                    max_output_tokens=1024,
+                ),
             )
-        )
 
-        response_stream = client.models.generate_content_stream(
-            model=GEMINI_MODEL,
-            contents=contents,
-            config=types.GenerateContentConfig(
+            for chunk in response_stream:
+                if hasattr(chunk, "candidates") and chunk.candidates:
+                    for candidate in chunk.candidates:
+                        if hasattr(candidate, "content") and candidate.content and candidate.content.parts:
+                            for part in candidate.content.parts:
+                                if not getattr(part, "thought", False) and part.text:
+                                    yield part.text
+                elif hasattr(chunk, "text") and chunk.text:
+                    yield chunk.text
+
+        elif GENAI_BACKEND == "google-generativeai":
+            genai_legacy.configure(api_key=api_key)
+            model = genai_legacy.GenerativeModel(
+                model_name="gemini-1.5-flash",
                 system_instruction=system_prompt,
-                temperature=0.7,
-                max_output_tokens=1024,
-            ),
-        )
-
-        for chunk in response_stream:
-            # Extract text safely handling thought parts if any
-            if hasattr(chunk, "candidates") and chunk.candidates:
-                for candidate in chunk.candidates:
-                    if hasattr(candidate, "content") and candidate.content and candidate.content.parts:
-                        for part in candidate.content.parts:
-                            if not getattr(part, "thought", False) and part.text:
-                                yield part.text
-            elif hasattr(chunk, "text") and chunk.text:
-                yield chunk.text
+            )
+            history = []
+            for msg in chat_history:
+                history.append({
+                    "role": "user" if msg["role"] == "user" else "model",
+                    "parts": msg["parts"],
+                })
+            chat = model.start_chat(history=history)
+            response_stream = chat.send_message(user_message, stream=True)
+            for chunk in response_stream:
+                if chunk.text:
+                    yield chunk.text
 
     except Exception as e:
         err = str(e).lower()
@@ -321,6 +388,64 @@ def extract_content_from_file(
 
     # 2. PDF Documents — send to Gemini Multimodal
     if ext == "pdf" or "pdf" in mime_type:
+        if not GENAI_AVAILABLE:
+            return "Gemini SDK is not available to read PDFs. Please ensure Python 3.11 is configured."
+        if GENAI_BACKEND == "google-genai":
+            try:
+                client = genai.Client(api_key=api_key)
+                response = client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=[
+                        types.Content(
+                            role="user",
+                            parts=[
+                                types.Part(
+                                    inline_data=types.Blob(
+                                        mime_type="application/pdf",
+                                        data=file_bytes,
+                                    )
+                                ),
+                                types.Part(text=(
+                                    f"Read this PDF file ('{file_name}') carefully. "
+                                    "Extract all math problems, equations, exercises, and questions shown in it. "
+                                    "Output the extracted questions clearly with question numbers and symbols. "
+                                    "Preserve all fractions, equations, numbers, and variables accurately."
+                                )),
+                            ],
+                        )
+                    ],
+                    config=types.GenerateContentConfig(
+                        temperature=0.1,
+                        max_output_tokens=1024,
+                    ),
+                )
+                text_parts = [p.text for c in response.candidates for p in c.content.parts if not getattr(p, "thought", False) and p.text]
+                res = "\n".join(text_parts).strip() if text_parts else (response.text or "")
+                return res if res else "Could not extract text from this PDF."
+            except Exception as e:
+                return f"Error reading PDF: {str(e)[:120]}"
+        elif GENAI_BACKEND == "google-generativeai":
+            try:
+                genai_legacy.configure(api_key=api_key)
+                model = genai_legacy.GenerativeModel("gemini-1.5-flash")
+                response = model.generate_content([
+                    {"mime_type": "application/pdf", "data": file_bytes},
+                    (
+                        f"Read this PDF file ('{file_name}') carefully. "
+                        "Extract all math problems, equations, exercises, and questions shown in it."
+                    )
+                ])
+                return response.text if response.text else "Could not extract text from this PDF."
+            except Exception as e:
+                return f"Error reading PDF: {str(e)[:120]}"
+
+    # 3. Images (JPEG, PNG, WEBP, etc.) — send to Gemini Vision
+    if not GENAI_AVAILABLE:
+        return "Gemini SDK is not available to scan images. Please ensure Python 3.11 is configured."
+
+    actual_mime = mime_type if mime_type and "/" in mime_type else f"image/{ext if ext != 'jpg' else 'jpeg'}"
+
+    if GENAI_BACKEND == "google-genai":
         try:
             client = genai.Client(api_key=api_key)
             response = client.models.generate_content(
@@ -331,71 +456,47 @@ def extract_content_from_file(
                         parts=[
                             types.Part(
                                 inline_data=types.Blob(
-                                    mime_type="application/pdf",
+                                    mime_type=actual_mime,
                                     data=file_bytes,
                                 )
                             ),
                             types.Part(text=(
-                                f"Read this PDF file ('{file_name}') carefully. "
-                                "Extract all math problems, equations, exercises, and questions shown in it. "
-                                "Output the extracted questions clearly with question numbers and symbols. "
-                                "Preserve all fractions, equations, numbers, and variables accurately."
+                                "Look at this image carefully. "
+                                "Extract the math problem, question, or equation shown in it. "
+                                "Write it out as plain text exactly as it appears — "
+                                "preserve all numbers, symbols, fractions, and words. "
+                                "Output ONLY the math problem text, nothing else. "
+                                "If you cannot find any math problem in the image, "
+                                "respond with exactly: 'No math problem found in image.'"
                             )),
                         ],
                     )
                 ],
                 config=types.GenerateContentConfig(
                     temperature=0.1,
-                    max_output_tokens=1024,
+                    max_output_tokens=512,
                 ),
             )
-            text_parts = [p.text for c in response.candidates for p in c.content.parts if not p.thought and p.text]
+            text_parts = [p.text for c in response.candidates for p in c.content.parts if not getattr(p, "thought", False) and p.text]
             res = "\n".join(text_parts).strip() if text_parts else (response.text or "")
-            return res if res else "Could not extract text from this PDF."
+            return res if res else "Could not extract text from the image."
         except Exception as e:
-            return f"Error reading PDF: {str(e)[:120]}"
+            err = str(e).lower()
+            if "429" in err or "quota" in err:
+                return "API limit reached. Please wait a moment and try again."
+            return f"File reading failed: {str(e)[:120]}"
 
-    # 3. Images (JPEG, PNG, WEBP, etc.) — send to Gemini Vision
-    try:
-        actual_mime = mime_type if mime_type and "/" in mime_type else f"image/{ext if ext != 'jpg' else 'jpeg'}"
-        client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=[
-                types.Content(
-                    role="user",
-                    parts=[
-                        types.Part(
-                            inline_data=types.Blob(
-                                mime_type=actual_mime,
-                                data=file_bytes,
-                            )
-                        ),
-                        types.Part(text=(
-                            "Look at this image carefully. "
-                            "Extract the math problem, question, or equation shown in it. "
-                            "Write it out as plain text exactly as it appears — "
-                            "preserve all numbers, symbols, fractions, and words. "
-                            "Output ONLY the math problem text, nothing else. "
-                            "If you cannot find any math problem in the image, "
-                            "respond with exactly: 'No math problem found in image.'"
-                        )),
-                    ],
-                )
-            ],
-            config=types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=512,
-            ),
-        )
-        text_parts = [p.text for c in response.candidates for p in c.content.parts if not p.thought and p.text]
-        res = "\n".join(text_parts).strip() if text_parts else (response.text or "")
-        return res if res else "Could not extract text from the image."
-    except Exception as e:
-        err = str(e).lower()
-        if "429" in err or "quota" in err:
-            return "API limit reached. Please wait a moment and try again."
-        return f"File reading failed: {str(e)[:120]}"
+    elif GENAI_BACKEND == "google-generativeai":
+        try:
+            genai_legacy.configure(api_key=api_key)
+            model = genai_legacy.GenerativeModel("gemini-1.5-flash")
+            response = model.generate_content([
+                {"mime_type": actual_mime, "data": file_bytes},
+                "Extract the math problem, question, or equation shown in this image."
+            ])
+            return response.text if response.text else "Could not extract text from the image."
+        except Exception as e:
+            return f"File reading failed: {str(e)[:120]}"
 
 
 def extract_math_from_image(api_key: str, image_bytes: bytes, mime_type: str) -> str:

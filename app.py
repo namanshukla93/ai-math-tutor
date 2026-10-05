@@ -23,6 +23,9 @@ from utils import (
     generate_parent_summary,
     extract_content_from_file,
     create_math_artifact,
+    GENAI_AVAILABLE,
+    GENAI_ERROR,
+    GENAI_BACKEND,
 )
 
 
@@ -711,6 +714,16 @@ if st.session_state.focus_mode:
         </div>
         """,
         unsafe_allow_html=True,
+    )
+
+# SDK Availability Check
+if not GENAI_AVAILABLE:
+    st.warning(
+        "⚠️ **Google GenAI SDK Setup Notice (Streamlit Cloud)**\n\n"
+        f"*{GENAI_ERROR}*\n\n"
+        "**To resolve this:**\n"
+        "1. Click **Manage app** (bottom-right corner) → **⋮ (three dots)** → **Reboot app**.\n"
+        "2. (If prompted in App Settings) set Python version to **3.11**."
     )
 
 # API Key Error Check

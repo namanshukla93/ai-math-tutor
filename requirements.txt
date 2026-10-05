@@ -1,7 +1,9 @@
-# requirements.txt — all Python packages needed to run this project
+# requirements.txt — all Python packages needed to run AI Math Tutor
 #
-# Install them all at once with:  pip install -r requirements.txt
+# Install them with:  pip install -r requirements.txt
 
-streamlit>=1.35.0     # Builds the web app UI
-google-genai>=1.0.0   # Official Google Gemini API client (new SDK, replaces google-generativeai)
-python-dotenv>=1.0.0  # Loads the .env file so our API key is available
+streamlit>=1.35.0
+google-genai>=1.0.0
+google-generativeai>=0.8.0
+python-dotenv>=1.0.0
+pillow>=10.0.0
