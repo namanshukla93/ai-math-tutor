@@ -6,10 +6,10 @@
 [![Streamlit](https://img.shields.io/badge/UI-Streamlit-red.svg)](https://streamlit.io/)
 [![Google Gemini](https://img.shields.io/badge/AI-Google%20Gemini-orange.svg)](https://ai.google.dev/)
 [![SQLite](https://img.shields.io/badge/Database-SQLite%203-lightgrey.svg)](https://sqlite.org/)
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://namanshukla93-ai-math-tutor-app.streamlit.app/)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ai-mathtutor.streamlit.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-🔗 **Live Web App:** [https://namanshukla93-ai-math-tutor-app.streamlit.app/](https://namanshukla93-ai-math-tutor-app.streamlit.app/)
+🔗 **Live Web App:** [https://ai-mathtutor.streamlit.app/](https://ai-mathtutor.streamlit.app/)
 
 ---
 
@@ -105,7 +105,7 @@ You can host ApexSolve live online 24/7 for free using **Streamlit Community Clo
    ```toml
    GEMINI_API_KEY = "your_actual_gemini_api_key_here"
    ```
-5. Click **Deploy!** — In less than 2 minutes, your live web app URL (e.g., `https://apexsolve.streamlit.app`) will be active worldwide!
+5. Click **Deploy!** — In less than 2 minutes, your live web app URL (**`https://ai-mathtutor.streamlit.app/`**) will be active worldwide!
 
 ---
 
