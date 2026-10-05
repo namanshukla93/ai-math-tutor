@@ -507,13 +507,46 @@ def render_practice_arena_view():
         arena_level = st.selectbox("Difficulty", ["Foundation / Beginner", "Standard / Intermediate", "Advanced / Challenge"])
 
     if st.button("✨ Generate New Practice Challenge", type="primary", use_container_width=True):
-        prompt_q = f"Generate 1 high-quality practice question for topic '{arena_topic}' at '{arena_level}' level."
-        with st.spinner("Crafting challenge with detailed hints and full solution..."):
+        # Build a full, canonical practice question per topic so AI returns proper structured JSON
+        ARENA_TOPIC_QUESTIONS = {
+            # Mathematics
+            "Algebra & Quadratics": "Solve the quadratic equation 2x² - 5x - 3 = 0 using the quadratic formula. Find both roots and verify by substitution.",
+            "Calculus & Derivatives": "Differentiate f(x) = 3x³ - 5x² + 7x - 2 with respect to x. Also find the value of f'(2).",
+            "Integration": "Evaluate the definite integral of (4x³ - 6x + 2) dx from x = 0 to x = 2.",
+            "Trigonometry": "Prove that sin²θ + cos²θ = 1 and use it to find sin θ if cos θ = 3/5 (θ in first quadrant).",
+            "Probability & Statistics": "A bag contains 4 red, 3 blue, and 5 green balls. Two balls are drawn at random without replacement. Find the probability that both balls are red.",
+            "Arithmetic & Percentages": "A shopkeeper marks his goods 40% above cost price and allows a discount of 20%. What is the percentage profit or loss?",
+            "Coordinate Geometry": "Find the equation of the straight line passing through (3, -2) and (7, 4). Also find its slope and y-intercept.",
+            # Reasoning
+            "Number & Letter Series": "Find the next term in the series: 2, 6, 12, 20, 30, ?",
+            "Syllogisms & Venn Logic": "All dogs are animals. Some animals are cats. Conclusion I: Some dogs are cats. Conclusion II: All animals are dogs. Which conclusions logically follow?",
+            "Blood Relations": "Pointing to a man in a photograph, a woman said 'His mother is the only daughter of my mother.' How is the woman related to the man?",
+            "Direction Sense": "Ravi walks 10 km north, turns right and walks 5 km, then turns right again and walks 10 km. How far is he from the starting point and in which direction?",
+            "Coding-Decoding": "In a certain code language, COMPUTER is written as RFUVQNPC. Using the same logic, decode the word RPTUFE.",
+            "Seating Arrangement": "Six people A, B, C, D, E, F sit in a row. A is at one end. B sits immediately to the right of C. D is not next to A. E is between F and D. Find the seating arrangement.",
+            "Mathematical Puzzles": "A farmer has chickens and cows. He counts 50 heads and 140 legs in total. How many chickens and cows does he have?"
+        }
+        # Choose a canonical question that fits the selected topic and difficulty level
+        base_q = ARENA_TOPIC_QUESTIONS.get(
+            arena_topic,
+            f"Create and solve a {arena_level} level {arena_domain} problem from the topic: {arena_topic}."
+        )
+        # Embed the difficulty level context in the prompt
+        difficulty_hint = {
+            "Foundation / Beginner": "Treat this as a Foundation level question. Keep explanations extremely simple and beginner-friendly.",
+            "Standard / Intermediate": "Treat this as a Standard/Intermediate level question. Include moderate complexity.",
+            "Advanced / Challenge": "Treat this as an Advanced/Competitive level question (JEE/SSC/CAT style). Maximize rigor and complexity."
+        }.get(arena_level, "")
+        prompt_q = f"{base_q}\n\n{difficulty_hint}"
+
+        with st.spinner("🧠 Generating challenge with step-by-step solution and practice problems..."):
             ok, data, msg = solver.solve_question(prompt_q, preferred_category=arena_domain)
             if ok:
                 st.session_state["arena_challenge"] = data
+                st.session_state["arena_last_error"] = None
             else:
-                st.error(f"Generation error: {msg}")
+                st.session_state["arena_last_error"] = msg
+                st.error(f"❌ Generation error: {msg}")
 
     challenge = st.session_state.get("arena_challenge")
     if challenge:
