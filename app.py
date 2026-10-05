@@ -384,6 +384,13 @@ st.markdown("""
     ::-webkit-scrollbar-thumb:hover {
         background: #6366f1;
     }
+
+    /* Hide Streamlit default chrome, menu, footer, and deploy buttons */
+    #MainMenu {visibility: hidden; display: none !important;}
+    footer {visibility: hidden; display: none !important;}
+    header {visibility: hidden; display: none !important;}
+    .stDeployButton {display: none !important;}
+    [data-testid="stToolbar"] {visibility: hidden; display: none !important;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -406,32 +413,34 @@ if "saved_question_id" not in st.session_state:
 # 4. Top Navigation Bar (Common for all views)
 def render_top_navbar():
     user = st.session_state.get("user")
-    user_badge = f"""
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <span class="status-badge-pill"><span class="status-dot-pulse"></span> AI Engine: Active</span>
-            <span style="color: #cbd5e1; font-size: 0.85rem; font-weight: 600; background: rgba(99,102,241,0.18); border: 1px solid rgba(99,102,241,0.3); padding: 5px 14px; border-radius: 9999px;">
-                👤 {user['name']} ({user.get('target_exam', 'General')})
-            </span>
-        </div>
-    """ if user else """
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <span class="status-badge-pill"><span class="status-dot-pulse"></span> Google Gemini AI: Online</span>
-            <span style="color: #94a3b8; font-size: 0.82rem; font-weight: 500;">v2.4 Production</span>
-        </div>
-    """
+    if user:
+        user_badge = (
+            '<div style="display:flex;align-items:center;gap:10px;">'
+            '<span class="status-badge-pill"><span class="status-dot-pulse"></span> AI Engine: Active</span>'
+            f'<span style="color:#cbd5e1;font-size:0.85rem;font-weight:600;background:rgba(99,102,241,0.18);border:1px solid rgba(99,102,241,0.3);padding:5px 14px;border-radius:9999px;">👤 {user["name"]} ({user.get("target_exam", "General")})</span>'
+            '</div>'
+        )
+    else:
+        user_badge = (
+            '<div style="display:flex;align-items:center;gap:10px;">'
+            '<span class="status-badge-pill"><span class="status-dot-pulse"></span> Google Gemini AI: Online</span>'
+            '<span style="color:#94a3b8;font-size:0.82rem;font-weight:500;">v2.4 Production</span>'
+            '</div>'
+        )
 
-    st.markdown(f"""
-    <div class="top-glass-nav">
-        <div class="brand-logo-wrap">
-            <div class="brand-logo-icon">📐</div>
-            <div>
-                <div class="brand-name-text">ApexSolve</div>
-                <div style="color: #64748b; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">AI Math & Logical Reasoning Master</div>
-            </div>
-        </div>
-        {user_badge}
-    </div>
-    """, unsafe_allow_html=True)
+    nav_html = (
+        '<div class="top-glass-nav">'
+        '<div class="brand-logo-wrap">'
+        '<div class="brand-logo-icon">📐</div>'
+        '<div>'
+        '<div class="brand-name-text">ApexSolve</div>'
+        '<div style="color:#64748b;font-size:0.72rem;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">AI Math & Logical Reasoning Master</div>'
+        '</div>'
+        '</div>'
+        f'{user_badge}'
+        '</div>'
+    )
+    st.markdown(nav_html, unsafe_allow_html=True)
 
 
 # 5. Authentication & Landing Views
@@ -439,26 +448,27 @@ def render_auth_page():
     render_top_navbar()
 
     # Hero Banner
-    st.markdown("""
-    <div style="text-align: center; margin-top: 15px; margin-bottom: 25px; animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1);">
-        <div class="hero-badge">✨ Next-Generation Student Intelligence Platform</div>
-        <h1 class="main-title">Master Mathematics & Logical Reasoning</h1>
-        <p class="sub-title" style="max-width: 680px; margin: 0 auto 20px auto;">
-            Experience textbook-grade KaTeX proofs with zero skipped steps, intelligent deductive reasoning, 
-            and adaptive practice problem challenges tailored to your exam.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    hero_html = (
+        '<div style="text-align:center;margin-top:15px;margin-bottom:25px;animation:fadeInUp 0.7s cubic-bezier(0.16,1,0.3,1);">'
+        '<div class="hero-badge">✨ Next-Generation Student Intelligence Platform</div>'
+        '<h1 class="main-title">Master Mathematics & Logical Reasoning</h1>'
+        '<p class="sub-title" style="max-width:680px;margin:0 auto 20px auto;">'
+        'Experience textbook-grade KaTeX proofs with zero skipped steps, intelligent deductive reasoning, '
+        'and adaptive practice problem challenges tailored to your exam.'
+        '</p>'
+        '</div>'
+    )
+    st.markdown(hero_html, unsafe_allow_html=True)
 
     # Centered Auth Card
     col1, col2, col3 = st.columns([1, 1.8, 1])
     with col2:
-        st.markdown('<div class="card-box" style="border: 1px solid rgba(99, 102, 241, 0.3); box-shadow: 0 16px 40px -10px rgba(0,0,0,0.5);">', unsafe_allow_html=True)
+        st.markdown('<div class="card-box" style="border:1px solid rgba(99,102,241,0.3);box-shadow:0 16px 40px -10px rgba(0,0,0,0.5);">', unsafe_allow_html=True)
         auth_tab1, auth_tab2 = st.tabs(["🔑 Sign In to Portal", "📝 New Student Registration"])
 
         with auth_tab1:
-            st.markdown("<div style='font-weight:700; color:#f8fafc; font-size:1.1rem; margin-bottom:6px;'>Welcome Back, Scholar</div>", unsafe_allow_html=True)
-            st.markdown("<div style='color:#94a3b8; font-size:0.85rem; margin-bottom:16px;'>Enter your registered email and password to access your workspace.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-weight:700;color:#f8fafc;font-size:1.1rem;margin-bottom:6px;'>Welcome Back, Scholar</div>", unsafe_allow_html=True)
+            st.markdown("<div style='color:#94a3b8;font-size:0.85rem;margin-bottom:16px;'>Enter your registered email and password to access your workspace.</div>", unsafe_allow_html=True)
 
             login_email = st.text_input("Student Email", key="login_email_input", placeholder="student@example.com")
             login_pass = st.text_input("Password", type="password", key="login_pass_input")
@@ -487,14 +497,15 @@ def render_auth_page():
                     else:
                         st.error(msg)
 
-            st.markdown("""
-            <div style="background: rgba(99, 102, 241, 0.08); border: 1px dashed rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 8px 12px; margin-top: 14px; text-align: center;">
-                <span style="color: #94a3b8; font-size: 0.8rem;">💡 Quick Demo Account: <code style="color:#c7d2fe;">namanshukla9889@gmail.com</code> | <code style="color:#c7d2fe;">naman123</code></span>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                '<div style="background:rgba(99,102,241,0.08);border:1px dashed rgba(99,102,241,0.25);border-radius:8px;padding:8px 12px;margin-top:14px;text-align:center;">'
+                '<span style="color:#94a3b8;font-size:0.8rem;">💡 Quick Demo Account: <code style="color:#c7d2fe;">namanshukla9889@gmail.com</code> | <code style="color:#c7d2fe;">naman123</code></span>'
+                '</div>',
+                unsafe_allow_html=True
+            )
 
         with auth_tab2:
-            st.markdown("<div style='font-weight:700; color:#f8fafc; font-size:1.1rem; margin-bottom:6px;'>Create Your Student Profile</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-weight:700;color:#f8fafc;font-size:1.1rem;margin-bottom:6px;'>Create Your Student Profile</div>", unsafe_allow_html=True)
             new_name = st.text_input("Full Name", placeholder="e.g. Naman Shukla", key="reg_name")
             new_email = st.text_input("Email Address", placeholder="e.g. namanshukla9889@gmail.com", key="reg_email")
             new_pass = st.text_input("Create Password (min 6 characters)", type="password", key="reg_pass")
@@ -516,30 +527,31 @@ def render_auth_page():
         st.markdown('</div>', unsafe_allow_html=True)
 
     # 4 Highlights Feature Cards Grid
-    st.markdown("""
-    <div class="landing-features-grid">
-        <div class="feature-card-item">
-            <div class="feature-card-icon">📐</div>
-            <div class="feature-card-title">Rigorous Math Proofs</div>
-            <div class="feature-card-desc">Zero intermediate steps skipped. Every algebraic substitution and theorem clearly justified in textbook KaTeX.</div>
-        </div>
-        <div class="feature-card-item">
-            <div class="feature-card-icon">🧠</div>
-            <div class="feature-card-title">Deductive Logic Engine</div>
-            <div class="feature-card-desc">Formal syllogisms, Euler-Venn diagrams, complex bloodline relations, and number series sequence analysis.</div>
-        </div>
-        <div class="feature-card-item">
-            <div class="feature-card-icon">🎯</div>
-            <div class="feature-card-title">Adaptive Practice Arena</div>
-            <div class="feature-card-desc">Generate instant multi-tiered practice problems with live answer checking, step hints, and full solutions.</div>
-        </div>
-        <div class="feature-card-item">
-            <div class="feature-card-icon">📚</div>
-            <div class="feature-card-title">Concept & Formula Book</div>
-            <div class="feature-card-desc">High-yield mathematical handbook and reasoning cheat codes (EJOTY, reverse pairs) built directly inside.</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    features_html = (
+        '<div class="landing-features-grid">'
+        '<div class="feature-card-item">'
+        '<div class="feature-card-icon">📐</div>'
+        '<div class="feature-card-title">Rigorous Math Proofs</div>'
+        '<div class="feature-card-desc">Zero intermediate steps skipped. Every algebraic substitution and theorem clearly justified in textbook KaTeX.</div>'
+        '</div>'
+        '<div class="feature-card-item">'
+        '<div class="feature-card-icon">🧠</div>'
+        '<div class="feature-card-title">Deductive Logic Engine</div>'
+        '<div class="feature-card-desc">Formal syllogisms, Euler-Venn diagrams, complex bloodline relations, and number series sequence analysis.</div>'
+        '</div>'
+        '<div class="feature-card-item">'
+        '<div class="feature-card-icon">🎯</div>'
+        '<div class="feature-card-title">Adaptive Practice Arena</div>'
+        '<div class="feature-card-desc">Generate instant multi-tiered practice problems with live answer checking, step hints, and full solutions.</div>'
+        '</div>'
+        '<div class="feature-card-item">'
+        '<div class="feature-card-icon">📚</div>'
+        '<div class="feature-card-title">Concept & Formula Book</div>'
+        '<div class="feature-card-desc">High-yield mathematical handbook and reasoning cheat codes (EJOTY, reverse pairs) built directly inside.</div>'
+        '</div>'
+        '</div>'
+    )
+    st.markdown(features_html, unsafe_allow_html=True)
 
 
 # 5. Main Application Header & Sidebar
